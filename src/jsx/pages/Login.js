@@ -46,7 +46,7 @@ function Login (props) {
                       </Link>
                     <div className="login-description">
                         <h2 className="main-title mb-2">Welcome To Deep Clear!</h2>
-                        <h3 className="main-title mb-2">Client Portal</h3>
+                        <h3 className="main-title mb-2">Admin Portal</h3>
                         <p className="">Think Deep, Solve Clear</p>
                         <ul className="social-icons mt-4">
                             <li><Link to={"/login"} target='_blank'><i className="fab fa-facebook-f"></i></Link></li>

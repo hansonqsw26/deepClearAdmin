@@ -259,7 +259,7 @@ const SideBar = () => {
               })}
           </ul>
           <div className="copyright">
-            <p><strong>Deep Clear Inc</strong> © 2025 All Rights Reserved</p>
+            <p><strong>DeepClear Inc</strong> © 2025 All Rights Reserved</p>
             <p className="fs-12">Made with <span className="heart" onClick={heartBlast}></span> by Deep Clear</p>
           </div>
         </PerfectScrollbar>

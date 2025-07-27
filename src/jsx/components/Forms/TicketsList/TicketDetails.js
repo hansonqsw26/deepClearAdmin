@@ -17,6 +17,25 @@ const TicketDetails = () => {
     const [originalData, setOriginalData] = useState({});
     const [message, setMessage] = useState("");
     const [isEditing, setIsEditing] = useState(false);
+    const [department, setDepartment] = useState(null);
+
+    const editableFieldsForDept2 = [
+        "carrier_name",
+        "ein_number",
+        "scac_number",
+        "trailer_number",
+        "pars",
+        "transaction_number",
+    ];
+
+    useEffect(() => {
+        try {
+            const userData = JSON.parse(localStorage.getItem("adminUser"));
+            setDepartment(userData?.department || null);
+        } catch {
+            setDepartment(null);
+        }
+    }, []);
 
     useEffect(() => {
         if (!referenceNumber) {
@@ -36,10 +55,18 @@ const TicketDetails = () => {
                 const data = await res.json();
 
                 if (res.ok && data.data && data.data.length > 0) {
-                    const found = data.data[0]; // assuming API returns array of matches
+                    const found = data.data[0];
                     setTicket(found);
-                    setFormData(found);
-                    setOriginalData(found);
+                    setFormData({
+                        ...found,
+                        pars: found.pars ? found.pars.split(",") : [""],
+                        transaction_number: found.transaction_number ? found.transaction_number.split(",") : [""],
+                    });
+                    setOriginalData({
+                        ...found,
+                        pars: found.pars ? found.pars.split(",") : [""],
+                        transaction_number: found.transaction_number ? found.transaction_number.split(",") : [""],
+                    });
                 } else {
                     setError(data.error || "Ticket not found.");
                 }
@@ -57,6 +84,29 @@ const TicketDetails = () => {
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
+    const handleArrayChange = (field, index, value) => {
+        setFormData((prev) => {
+            const updated = [...(prev[field] || [])];
+            updated[index] = value;
+            return { ...prev, [field]: updated };
+        });
+    };
+
+    const addField = (field) => {
+        setFormData((prev) => ({
+            ...prev,
+            [field]: [...(prev[field] || []), ""],
+        }));
+    };
+
+    const removeField = (field, index) => {
+        setFormData((prev) => {
+            const updated = [...(prev[field] || [])];
+            updated.splice(index, 1);
+            return { ...prev, [field]: updated };
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setMessage("");
@@ -64,6 +114,10 @@ const TicketDetails = () => {
         const payload = {
             ...formData,
             truck_id: formData.truck_ticket_id,
+            pars: Array.isArray(formData.pars) ? formData.pars.join(",") : formData.pars,
+            transaction_number: Array.isArray(formData.transaction_number)
+                ? formData.transaction_number.join(",")
+                : formData.transaction_number,
         };
         delete payload.truck_ticket_id;
 
@@ -93,6 +147,12 @@ const TicketDetails = () => {
         }
     };
 
+    const isFieldEditable = (field) => {
+        if (!isEditing) return false;
+        if (department === 2) return editableFieldsForDept2.includes(field);
+        return true;
+    };
+
     if (loading) return <p>Loading ticket details...</p>;
     if (error)
         return (
@@ -118,27 +178,34 @@ const TicketDetails = () => {
                     Edit
                 </button>
             ) : (
-                <button className="btn btn-danger mb-3" onClick={() => {
-                    setFormData(originalData);
-                    setIsEditing(false);
-                    setMessage("");
-                }}>
+                <button
+                    className="btn btn-danger mb-3"
+                    onClick={() => {
+                        setFormData(originalData);
+                        setIsEditing(false);
+                        setMessage("");
+                    }}
+                >
                     Cancel Edit
                 </button>
             )}
 
             <form onSubmit={handleSubmit}>
-                {/* Example readonly fields */}
                 <div className="mb-3">
                     <label>Main ID</label>
                     <input type="text" name="main_id" className="form-control" value={formData.main_id || ""} readOnly />
                 </div>
                 <div className="mb-3">
                     <label>Reference Number</label>
-                    <input type="text" name="reference_number" className="form-control" value={formData.reference_number || ""} readOnly />
+                    <input
+                        type="text"
+                        name="reference_number"
+                        className="form-control"
+                        value={formData.reference_number || ""}
+                        readOnly
+                    />
                 </div>
 
-                {/* Editable fields */}
                 {[
                     "container_number",
                     "pickup_address",
@@ -162,15 +229,56 @@ const TicketDetails = () => {
                 ].map((field) => (
                     <div className="mb-3" key={field}>
                         <label>{field.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</label>
-                        <input
-                            type={field.includes("price") ? "number" : field === "pickup_time" ? "datetime-local" : "text"}
-                            step={field.includes("price") ? "0.01" : undefined}
-                            name={field}
-                            className="form-control"
-                            value={formData[field] || ""}
-                            onChange={handleChange}
-                            readOnly={!isEditing}
-                        />
+
+                        {["pars", "transaction_number"].includes(field) ? (
+                            formData[field]?.map((val, idx) => (
+                                <div className="mb-2 d-flex align-items-center" key={idx}>
+                                    <input
+                                        type="text"
+                                        className="form-control me-2"
+                                        value={val}
+                                        onChange={(e) => handleArrayChange(field, idx, e.target.value)}
+                                        readOnly={!isFieldEditable(field)}
+                                    />
+                                    {isEditing && isFieldEditable(field) && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-outline-danger me-1"
+                                                onClick={() => removeField(field, idx)}
+                                            >
+                                                −
+                                            </button>
+                                            {idx === formData[field].length - 1 && (
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-sm btn-outline-primary"
+                                                    onClick={() => addField(field)}
+                                                >
+                                                    +
+                                                </button>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            ))
+                        ) : (
+                            <input
+                                type={
+                                    field.includes("price")
+                                        ? "number"
+                                        : field === "pickup_time"
+                                            ? "datetime-local"
+                                            : "text"
+                                }
+                                step={field.includes("price") ? "0.01" : undefined}
+                                name={field}
+                                className="form-control"
+                                value={formData[field] || ""}
+                                onChange={handleChange}
+                                readOnly={!isFieldEditable(field)}
+                            />
+                        )}
                     </div>
                 ))}
 

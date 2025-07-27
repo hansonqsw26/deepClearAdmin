@@ -3,11 +3,11 @@ import React, { useReducer, useContext, useEffect, useState } from "react";
 import PerfectScrollbar from "react-perfect-scrollbar";
 /// Link
 import { Link } from "react-router-dom";
-import {Collapse ,Dropdown } from "react-bootstrap";
-import {useScrollPosition} from "@n8tb1t/use-scroll-position";
-import {MenuList} from './Menu';
+import { Collapse, Dropdown } from "react-bootstrap";
+import { useScrollPosition } from "@n8tb1t/use-scroll-position";
+import { MenuList as originalMenuList } from "./Menu";
 import { ThemeContext } from "../../../context/ThemeContext";
-import LogoutPage from './Logout';
+import LogoutPage from "./Logout";
 /// Image
 import profile from "../../../images/profile/pic1.jpg";
 
@@ -17,9 +17,9 @@ const reducer = (previousState, updatedState) => ({
 });
 
 const initialState = {
-  active : "",
-  activeSubmenu : "",
-}
+  active: "",
+  activeSubmenu: "",
+};
 
 const SideBar = () => {
   const {
@@ -33,21 +33,60 @@ const SideBar = () => {
   const [state, setState] = useReducer(reducer, initialState);
 
   const [userData, setUserData] = useState({
-    name: '',
-    email: '',
-    profilePic: profile,  // Default profile picture
+    name: "",
+    email: "",
+    profilePic: profile, // Default profile picture
+    department: null,
   });
 
+  // Filtered menu based on adminUser.department
+  const [menuList, setMenuList] = useState(originalMenuList);
 
   useEffect(() => {
+    // Load user data from localStorage
+    let storedUserData = null;
+    try {
+      storedUserData = JSON.parse(localStorage.getItem("adminUser"));
+    } catch {
+      storedUserData = null;
+    }
 
-    const storedUserData = JSON.parse(localStorage.getItem('adminUser'));
     if (storedUserData) {
       setUserData({
-        name: storedUserData.email || 'William',  // Default to 'William' if email is not available
-        email: storedUserData.email || 'william@gmail.com',  // Default email
-        profilePic: storedUserData.profilePic || profile,  // Default profile picture
+        name: storedUserData.email || "William",
+        email: storedUserData.email || "william@gmail.com",
+        profilePic: storedUserData.profilePic || profile,
+        department: storedUserData.department || null,
       });
+
+      if (storedUserData.department === 2) {
+        // Filter menu for department 2:
+        // 1) Remove "Quote" section
+        // 2) Remove "Create Account" section
+        // 3) Inside "Ticket" section, remove "Create Truck Ticket"
+        const filteredMenu = originalMenuList
+            .filter(
+                (menu) =>
+                    menu.title !== "Quote" && menu.title !== "Create Account"
+            )
+            .map((menu) => {
+              if (menu.title === "Ticket") {
+                // Filter "Create Truck Ticket" from Ticket content
+                const filteredContent = menu.content.filter(
+                    (item) => item.title !== "Create Truck Ticket"
+                );
+                return { ...menu, content: filteredContent };
+              }
+              return menu;
+            });
+
+        setMenuList(filteredMenu);
+      } else {
+        setMenuList(originalMenuList);
+      }
+    } else {
+      // If no user data, just use original menu list
+      setMenuList(originalMenuList);
     }
 
     var btn = document.querySelector(".nav-control");
@@ -55,37 +94,39 @@ const SideBar = () => {
     function toggleFunc() {
       return aaa.classList.toggle("menu-toggle");
     }
-    btn.addEventListener("click", toggleFunc);
+    if (btn) btn.addEventListener("click", toggleFunc);
+
+    return () => {
+      if (btn) btn.removeEventListener("click", toggleFunc);
+    };
   }, []);
 
-  let handleheartBlast = document.querySelector('.heart');
-  function heartBlast(){
+  let handleheartBlast = document.querySelector(".heart");
+  function heartBlast() {
     return handleheartBlast.classList.toggle("heart-blast");
   }
-  const [hideOnScroll, setHideOnScroll] = useState(true)
+  const [hideOnScroll, setHideOnScroll] = useState(true);
   useScrollPosition(
-    ({ prevPos, currPos }) => {
-      const isShow = currPos.y > prevPos.y
-      if (isShow !== hideOnScroll) setHideOnScroll(isShow)
-    },
-    [hideOnScroll]
-  )
+      ({ prevPos, currPos }) => {
+        const isShow = currPos.y > prevPos.y;
+        if (isShow !== hideOnScroll) setHideOnScroll(isShow);
+      },
+      [hideOnScroll]
+  );
 
-
-  const handleMenuActive = status => {
-    setState({active : status});
-    if(state.active === status){
-      setState({active : ""});
+  const handleMenuActive = (status) => {
+    setState({ active: status });
+    if (state.active === status) {
+      setState({ active: "" });
     }
-  }
+  };
   const handleSubmenuActive = (status) => {
-    setState({activeSubmenu : status})
-    if(state.activeSubmenu === status){
-      setState({activeSubmenu : ""})
+    setState({ activeSubmenu: status });
+    if (state.activeSubmenu === status) {
+      setState({ activeSubmenu: "" });
     }
-  }
+  };
 
-  //let scrollPosition = useScrollPosition();
   /// Path
   let path = window.location.pathname;
   path = path.split("/");
@@ -93,177 +134,151 @@ const SideBar = () => {
   /// Active menu
 
   return (
-    <div
-        onMouseEnter={()=>ChangeIconSidebar(true)}
-        onMouseLeave={()=>ChangeIconSidebar(false)}
-        className={`dlabnav ${iconHover} ${
-          sidebarposition.value === "fixed" &&
-          sidebarLayout.value === "horizontal" &&
-          headerposition.value === "static"
-            ? hideOnScroll > 120
-              ? "fixed"
-              : ""
-            : ""
-        }`}
-    >
-      <PerfectScrollbar className="dlabnav-scroll">
+      <div
+          onMouseEnter={() => ChangeIconSidebar(true)}
+          onMouseLeave={() => ChangeIconSidebar(false)}
+          className={`dlabnav ${iconHover} ${
+              sidebarposition.value === "fixed" &&
+              sidebarLayout.value === "horizontal" &&
+              headerposition.value === "static"
+                  ? hideOnScroll > 120
+                      ? "fixed"
+                      : ""
+                  : ""
+          }`}
+      >
+        <PerfectScrollbar className="dlabnav-scroll">
           <ul className="metismenu" id="menu">
             <Dropdown as="li" className="nav-item dropdown header-profile">
               <Dropdown.Toggle
-                variant=""
-                as="a"
-                className="nav-link i-false c-pointer"
-                // href="#"
-                role="button"
-                data-toggle="dropdown"
+                  variant=""
+                  as="a"
+                  className="nav-link i-false c-pointer"
+                  role="button"
+                  data-toggle="dropdown"
               >
-                <img src={profile} width={20} alt="" />
+                <img src={userData.profilePic} width={20} alt="profile" />
                 <div className="header-info ms-3">
-                  <span className="font-w600 ">Hi,<b>{userData.name}</b></span>
-                  {/*<small className="text-end font-w400">william@gmail.com</small>*/}
+                <span className="font-w600 ">
+                  Hi,<b>{userData.name}</b>
+                </span>
                 </div>
               </Dropdown.Toggle>
 
-              <Dropdown.Menu align="right" className="mt-2 dropdown-menu dropdown-menu-end">
-                {/*<Link to="/app-profile" className="dropdown-item ai-icon">*/}
-                {/*  <svg*/}
-                {/*    id="icon-user1"*/}
-                {/*    xmlns="http://www.w3.org/2000/svg"*/}
-                {/*    className="text-primary"*/}
-                {/*    width={18}*/}
-                {/*    height={18}*/}
-                {/*    viewBox="0 0 24 24"*/}
-                {/*    fill="none"*/}
-                {/*    stroke="currentColor"*/}
-                {/*    strokeWidth={2}*/}
-                {/*    strokeLinecap="round"*/}
-                {/*    strokeLinejoin="round"*/}
-                {/*  >*/}
-                {/*    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />*/}
-                {/*    <circle cx={12} cy={7} r={4} />*/}
-                {/*  </svg>*/}
-                {/*  <span className="ms-2">Profile </span>*/}
-                {/*</Link>*/}
-                {/*<Link to="/email-inbox" className="dropdown-item ai-icon">*/}
-                {/*  <svg*/}
-                {/*    id="icon-inbox"*/}
-                {/*    xmlns="http://www.w3.org/2000/svg"*/}
-                {/*    className="text-success"*/}
-                {/*    width={18}*/}
-                {/*    height={18}*/}
-                {/*    viewBox="0 0 24 24"*/}
-                {/*    fill="none"*/}
-                {/*    stroke="currentColor"*/}
-                {/*    strokeWidth={2}*/}
-                {/*    strokeLinecap="round"*/}
-                {/*    strokeLinejoin="round"*/}
-                {/*  >*/}
-                {/*    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />*/}
-                {/*    <polyline points="22,6 12,13 2,6" />*/}
-                {/*  </svg>*/}
-                {/*  <span className="ms-2">Inbox </span>*/}
-                {/*</Link>*/}
-        { /* <Link to="/page-login" className="dropdown-item ai-icon">
-                  <svg
-                    id="icon-logout"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="text-danger"
-                    width={18}
-                    height={18}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                    <polyline points="16 17 21 12 16 7" />
-                    <line x1={21} y1={12} x2={9} y2={12} />
-                  </svg>
-                  <span className="ms-2">Logout </span>
-                </Link> */}
-        <LogoutPage />
+              <Dropdown.Menu
+                  align="right"
+                  className="mt-2 dropdown-menu dropdown-menu-end"
+              >
+                <LogoutPage />
               </Dropdown.Menu>
             </Dropdown>
-              {MenuList.map((data, index)=>{
-                let menuClass = data.classsChange;
-                  if(menuClass === "menu-title"){
-                    return(
-                        <li className={menuClass}  key={index} >{data.title}</li>
-                    )
-                  }else{
-                    return(
-                      <li className={` ${ state.active === data.title ? 'mm-active' : ''}`}
+            {menuList.map((data, index) => {
+              let menuClass = data.classsChange;
+              if (menuClass === "menu-title") {
+                return (
+                    <li className={menuClass} key={index}>
+                      {data.title}
+                    </li>
+                );
+              } else {
+                return (
+                    <li
+                        className={` ${state.active === data.title ? "mm-active" : ""}`}
                         key={index}
-                      >
-
-                        {data.content && data.content.length > 0 ?
-                            <>
-                              <Link to={"#"}
+                    >
+                      {data.content && data.content.length > 0 ? (
+                          <>
+                            <Link
+                                to={"#"}
                                 className="has-arrow"
-                                onClick={() => {handleMenuActive(data.title)}}
-                              >
-                                  {data.iconStyle}
-                                  <span className="nav-text">{data.title}</span>
-                                  <span className="badge badge-xs style-1 badge-danger ms-2">{data.update}</span>
-                              </Link>
-                              <Collapse in={state.active === data.title ? true :false}>
-                                  <ul className={`${menuClass === "mm-collapse" ? "mm-show" : ""}`}>
-                                    {data.content && data.content.map((data,index) => {
-                                      return(
-                                          <li key={index}
-                                            className={`${ state.activeSubmenu === data.title ? "mm-active" : ""}`}
-                                          >
-                                            {data.content && data.content.length > 0 ?
-                                                <>
-                                                  <Link to={data.to} className={data.hasMenu ? 'has-arrow' : ''}
-                                                      onClick={() => { handleSubmenuActive(data.title)}}
-                                                  >
-                                                    {data.title}
-                                                  </Link>
-                                                  <Collapse in={state.activeSubmenu === data.title ? true :false}>
-                                                      <ul className={`${menuClass === "mm-collapse" ? "mm-show" : ""}`}>
-                                                        {data.content && data.content.map((data,index) => {
-                                                          return(
-                                                            <li key={index}>
-                                                              <Link className={`${path === data.to ? "mm-active" : ""}`} to={data.to}>{data.title}</Link>
-                                                            </li>
-                                                          )
-                                                        })}
-                                                      </ul>
-                                                  </Collapse>
-                                                </>
-                                              :
-                                              <Link to={data.to}>
-                                                {data.title}
-                                              </Link>
-                                            }
-
-                                          </li>
-                                      )
-                                    })}
-                                  </ul>
-                                </Collapse>
-                            </>
-                        :
-                          <Link  to={data.to} >
+                                onClick={() => {
+                                  handleMenuActive(data.title);
+                                }}
+                            >
                               {data.iconStyle}
                               <span className="nav-text">{data.title}</span>
+                              <span className="badge badge-xs style-1 badge-danger ms-2">
+                          {data.update}
+                        </span>
+                            </Link>
+                            <Collapse in={state.active === data.title ? true : false}>
+                              <ul
+                                  className={`${
+                                      menuClass === "mm-collapse" ? "mm-show" : ""
+                                  }`}
+                              >
+                                {data.content.map((subItem, index) => {
+                                  return (
+                                      <li
+                                          key={index}
+                                          className={`${
+                                              state.activeSubmenu === subItem.title ? "mm-active" : ""
+                                          }`}
+                                      >
+                                        {subItem.content && subItem.content.length > 0 ? (
+                                            <>
+                                              <Link
+                                                  to={subItem.to}
+                                                  className={subItem.hasMenu ? "has-arrow" : ""}
+                                                  onClick={() => {
+                                                    handleSubmenuActive(subItem.title);
+                                                  }}
+                                              >
+                                                {subItem.title}
+                                              </Link>
+                                              <Collapse
+                                                  in={state.activeSubmenu === subItem.title ? true : false}
+                                              >
+                                                <ul
+                                                    className={`${
+                                                        menuClass === "mm-collapse" ? "mm-show" : ""
+                                                    }`}
+                                                >
+                                                  {subItem.content.map((childItem, idx) => (
+                                                      <li key={idx}>
+                                                        <Link
+                                                            className={`${
+                                                                path === childItem.to ? "mm-active" : ""
+                                                            }`}
+                                                            to={childItem.to}
+                                                        >
+                                                          {childItem.title}
+                                                        </Link>
+                                                      </li>
+                                                  ))}
+                                                </ul>
+                                              </Collapse>
+                                            </>
+                                        ) : (
+                                            <Link to={subItem.to}>{subItem.title}</Link>
+                                        )}
+                                      </li>
+                                  );
+                                })}
+                              </ul>
+                            </Collapse>
+                          </>
+                      ) : (
+                          <Link to={data.to}>
+                            {data.iconStyle}
+                            <span className="nav-text">{data.title}</span>
                           </Link>
-                        }
-
-                      </li>
-                    )
-                }
-              })}
+                      )}
+                    </li>
+                );
+              }
+            })}
           </ul>
           <div className="copyright">
-            <p><strong>DeepClear Inc</strong> © 2025 All Rights Reserved</p>
-            <p className="fs-12">Made with <span className="heart" onClick={heartBlast}></span> by Deep Clear</p>
+            <p>
+              <strong>DeepClear Inc</strong> © 2025 All Rights Reserved
+            </p>
+            <p className="fs-12">
+              Made with <span className="heart" onClick={heartBlast}></span> by Deep Clear
+            </p>
           </div>
         </PerfectScrollbar>
-    </div>
+      </div>
   );
 };
 

@@ -75,15 +75,18 @@ const CreateAdminUser = () => {
                     />
                 </div>
                 <div className="mb-3">
-                    <label className="form-label">Department (Optional)</label>
-                    <input
-                        type="text"
-                        className="form-control"
+                    <label className="form-label">Department</label>
+                    <select
+                        className="form-select"
                         value={department}
                         onChange={(e) => setDepartment(e.target.value)}
                         disabled={loading}
-                        placeholder="Enter department ID or leave blank"
-                    />
+                        required
+                    >
+                        <option value="">Select Department</option>
+                        <option value="1">Deep Clear Office</option>
+                        <option value="2">Truck Company</option>
+                    </select>
                 </div>
                 <button type="submit" className="btn btn-primary" disabled={loading}>
                     {loading ? "Creating..." : "Create Admin"}

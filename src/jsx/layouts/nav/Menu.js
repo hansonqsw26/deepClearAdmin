@@ -19,7 +19,7 @@ export const MenuList = [
     //Dashboard
     {
         title: 'Quote',
-        classsChange: 'mm-collapse',		
+        classsChange: 'mm-collapse',
         iconStyle: <i className="flaticon-025-dashboard"></i>,
         content: [
             // {
@@ -72,12 +72,37 @@ export const MenuList = [
             //     to: 'transaction-history',
             // },
             //
-			// {
+            // {
             //     title: 'Transaction Details',
             //     to: 'transaction-details',
             // },
         ],
     },
+
+
+    {
+        title: 'Ticket',
+        classsChange: 'mm-collapse',
+        iconStyle: <i className="flaticon-025-dashboard"></i>,
+        content: [
+            // {
+            //     title: 'CreateQuote List',
+            //     to: 'quote-list',
+            // },
+            {
+                title: 'Create Truck Ticket',
+                to: 'create-truck-ticket',
+            },
+
+            {
+                title: 'Tickets List',
+                to: 'tickets-list',
+            },
+        ]
+
+    }
+
+
 
     //CMS
     // {

@@ -121,6 +121,9 @@ import CreateQuote from "./components/Forms/CreateQuote/CreateQuote";
 import QuoteList from "./components/Forms/QuoteList/QuoteList";
 import CreateAdminUser from "./components/Forms/CreateAccount/CreateAdminUser";
 import CreateClientUser from "./components/Forms/CreateAccount/CreateClientUser";
+import CreateTruckTicket from "./components/Forms/CreateTicket/CreateTruckTicket";
+import TicketsList from "./components/Forms/TicketsList/TicketsList";
+import TicketDetails from "./components/Forms/TicketsList/TicketDetails";
 
 const Markup = () => {
 
@@ -131,6 +134,9 @@ const Markup = () => {
     { url: "create-quote", component: <CreateQuote /> },
     { url: "create-admin-account", component: <CreateAdminUser /> },
     { url: "create-client-account", component: <CreateClientUser /> },
+    { url: "create-truck-ticket", component: <CreateTruckTicket /> },
+    { url: "tickets-list", component: <TicketsList /> },
+    { url: "ticket-details", component: <TicketDetails /> },
     { url: "dashboard", component: <Home /> },
     { url: "dashboard-dark", component: <DashboardDark/> },
     { url: "my-wallet", component: <MyWallet/> },

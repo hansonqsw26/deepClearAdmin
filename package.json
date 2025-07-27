@@ -1,6 +1,6 @@
 {
   "name": "dompet",
-  "version": "0.1.0", 
+  "version": "0.1.0",
   "private": true,
   "dependencies": {
     "@ckeditor/ckeditor5-build-classic": "^35.3.2",
@@ -84,5 +84,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "tailwindcss": "^4.1.11"
   }
 }

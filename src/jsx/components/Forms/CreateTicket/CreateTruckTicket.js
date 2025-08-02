@@ -171,25 +171,19 @@ const CreateTruckTicket = () => {
 
                 <div className="mb-3">
                     <label>POE</label>
-                    <input
-                        type="text"
+                    <select
                         name="poe"
-                        className="form-control"
+                        className="form-select"
                         value={formData.poe}
                         onChange={handleChange}
-                    />
+                    >
+                        <option value="">-- Select POE --</option>
+                        <option value="Coutts, AB (0705)">Coutts, AB (0705)</option>
+                        <option value="Sarnia, ON (3802)">Sarnia, ON (3802)</option>
+                        <option value="Windsor, ON (3801)">Windsor, ON (3801)</option>
+                    </select>
                 </div>
 
-                <div className="mb-3">
-                    <label>Cross Border Location</label>
-                    <input
-                        type="text"
-                        name="cross_border_location"
-                        className="form-control"
-                        value={formData.cross_border_location}
-                        onChange={handleChange}
-                    />
-                </div>
 
                 {/* Date/Time Picker */}
                 <div className="mb-3">

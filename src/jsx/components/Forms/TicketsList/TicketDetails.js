@@ -23,9 +23,12 @@ const TicketDetails = () => {
         "carrier_name",
         "ein_number",
         "scac_number",
-        "trailer_number",
         "pars",
         "transaction_number",
+        "supportor",
+        "load_number",
+        "poe",
+        "cost_price"
     ];
 
     useEffect(() => {
@@ -166,6 +169,79 @@ const TicketDetails = () => {
 
     if (!ticket) return null;
 
+    // Helper to render normal input or arrays
+    const renderField = (field) => {
+        if (["pars", "transaction_number"].includes(field)) {
+            return formData[field]?.map((val, idx) => (
+                <div className="mb-2 d-flex align-items-center" key={idx}>
+                    <input
+                        type="text"
+                        className="form-control me-2"
+                        value={val}
+                        onChange={(e) => handleArrayChange(field, idx, e.target.value)}
+                        readOnly={!isFieldEditable(field)}
+                    />
+                    {isEditing && isFieldEditable(field) && (
+                        <>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger me-1"
+                                onClick={() => removeField(field, idx)}
+                            >
+                                −
+                            </button>
+                            {idx === formData[field].length - 1 && (
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary"
+                                    onClick={() => addField(field)}
+                                >
+                                    +
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div>
+            ));
+        }
+
+        if (field === "poe") {
+            return isEditing && isFieldEditable(field) ? (
+                <select
+                    className="form-control"
+                    name="poe"
+                    value={formData.poe || ""}
+                    onChange={handleChange}
+                >
+                    <option value="">Select POE</option>
+                    <option value="Coutts, AB (0705)">Coutts, AB (0705)</option>
+                    <option value="Sarnia,ON(3802)">Sarnia,ON(3802)</option>
+                    <option value="Windsor,ON(3801)">Windsor,ON(3801)</option>
+                </select>
+            ) : formData.poe ? (
+                <input type="text" className="form-control" value={formData.poe} readOnly />
+            ) : null;
+        }
+
+        return (
+            <input
+                type={
+                    field.includes("price")
+                        ? "number"
+                        : field === "pickup_time"
+                            ? "datetime-local"
+                            : "text"
+                }
+                step={field.includes("price") ? "0.01" : undefined}
+                name={field}
+                className="form-control"
+                value={formData[field] || ""}
+                onChange={handleChange}
+                readOnly={!isFieldEditable(field)}
+            />
+        );
+    };
+
     return (
         <div className="container my-4">
             <button className="btn btn-secondary mb-3" onClick={() => navigate("/tickets-list")}>
@@ -191,99 +267,340 @@ const TicketDetails = () => {
             )}
 
             <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                    <label>Main ID</label>
-                    <input type="text" name="main_id" className="form-control" value={formData.main_id || ""} readOnly />
-                </div>
-                <div className="mb-3">
-                    <label>Reference Number</label>
-                    <input
-                        type="text"
-                        name="reference_number"
-                        className="form-control"
-                        value={formData.reference_number || ""}
-                        readOnly
-                    />
+                {/* Section 1: IDs */}
+                <h5 className="mb-3 mt-4">Ticket Identification</h5>
+                <div className="row g-3">
+                    <div className="col-md-4">
+                        <label>Main ID</label>
+                        <input type="text" name="main_id" className="form-control" value={formData.main_id || ""}
+                               readOnly/>
+                    </div>
+                    <div className="col-md-4">
+                        <label>Reference Number</label>
+                        <input type="text" name="reference_number" className="form-control"
+                               value={formData.reference_number || ""} readOnly/>
+                    </div>
+                    <div className="col-md-4">
+                        <label>Container Number</label>
+                        <input
+                            type="text"
+                            name="container_number"
+                            className="form-control"
+                            value={formData.container_number || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("container_number")}
+                        />
+                    </div>
+                    <div className="col-md-4">
+                        <label>PU Number</label>
+                        <input
+                            type="text"
+                            name="pu_number"
+                            className="form-control"
+                            value={formData.pu_number || ""}
+                            onChange={handleChange}
+                            readOnly={!isEditing}
+                        />
+                    </div>
+
                 </div>
 
-                {[
-                    "container_number",
-                    "pickup_address",
-                    "delivery_address",
-                    "carrier_name",
-                    "ein_number",
-                    "scac_number",
-                    "pickup_time",
-                    "load_number",
-                    "truck_number",
-                    "trailer_number",
-                    "poe",
-                    "cross_border_location",
-                    "quote_price",
-                    "cost_price",
-                    "supportor",
-                    "supportor_code",
-                    "gps_link",
-                    "pars",
-                    "transaction_number",
-                ].map((field) => (
-                    <div className="mb-3" key={field}>
-                        <label>{field.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}</label>
+                {/* Section 2: Addresses */}
+                <h5 className="mb-3 mt-4">Addresses</h5>
+                <div className="row g-3">
+                    <div className="col-md-6">
+                        <label>Pickup Address</label>
+                        <input
+                            type="text"
+                            name="pickup_address"
+                            className="form-control"
+                            value={formData.pickup_address || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("pickup_address")}
+                        />
+                    </div>
+                    <div className="col-md-6">
+                        <label>Delivery Address</label>
+                        <input
+                            type="text"
+                            name="delivery_address"
+                            className="form-control"
+                            value={formData.delivery_address || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("delivery_address")}
+                        />
+                    </div>
+                </div>
 
-                        {["pars", "transaction_number"].includes(field) ? (
-                            formData[field]?.map((val, idx) => (
-                                <div className="mb-2 d-flex align-items-center" key={idx}>
-                                    <input
-                                        type="text"
-                                        className="form-control me-2"
-                                        value={val}
-                                        onChange={(e) => handleArrayChange(field, idx, e.target.value)}
-                                        readOnly={!isFieldEditable(field)}
-                                    />
-                                    {isEditing && isFieldEditable(field) && (
-                                        <>
+                {/* Section 3: Carrier info */}
+                <h5 className="mb-3 mt-4">Carrier Information</h5>
+                <div className="row g-3">
+                    <div className="col-md-4">
+                        <label>Carrier Name</label>
+                        <input
+                            type="text"
+                            name="carrier_name"
+                            className="form-control"
+                            value={formData.carrier_name || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("carrier_name")}
+                        />
+                    </div>
+                    <div className="col-md-4">
+                        <label>Ein Number</label>
+                        <input
+                            type="text"
+                            name="ein_number"
+                            className="form-control"
+                            value={formData.ein_number || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("ein_number")}
+                        />
+                    </div>
+                    <div className="col-md-4">
+                        <label>Scac Number</label>
+                        <input
+                            type="text"
+                            name="scac_number"
+                            className="form-control"
+                            value={formData.scac_number || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("scac_number")}
+                        />
+                    </div>
+                </div>
+
+                {/* Section 4: Pricing */}
+                <h5 className="mb-3 mt-4">Pricing</h5>
+                <div className="row g-3">
+                    {department !== 2 && (
+                        <div className="col-md-6">
+                            <label>Quote Price</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                name="quote_price"
+                                className="form-control"
+                                value={formData.quote_price || ""}
+                                onChange={handleChange}
+                                readOnly={!isFieldEditable("quote_price")}
+                            />
+                        </div>
+                    )}
+                    <div className="col-md-6">
+                        <label>Cost Price</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            name="cost_price"
+                            className="form-control"
+                            value={formData.cost_price || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("cost_price")}
+                        />
+                    </div>
+                </div>
+
+                {/* Section 5: Other fields */}
+                <h5 className="mb-3 mt-4">Additional Details</h5>
+                <div className="row g-3">
+                    {/* pickup_time */}
+                    <div className="col-md-4">
+                        <label>Pickup Time</label>
+                        <input
+                            type="datetime-local"
+                            name="pickup_time"
+                            className="form-control"
+                            value={formData.pickup_time || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("pickup_time")}
+                        />
+                    </div>
+
+                    {/* load_number */}
+                    <div className="col-md-4">
+                        <label>Load Number</label>
+                        <input
+                            type="text"
+                            name="load_number"
+                            className="form-control"
+                            value={formData.load_number || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("load_number")}
+                        />
+                    </div>
+
+                    {/* truck_number */}
+                    <div className="col-md-4">
+                        <label>Truck Number</label>
+                        <input
+                            type="text"
+                            name="truck_number"
+                            className="form-control"
+                            value={formData.truck_number || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("truck_number")}
+                        />
+                    </div>
+
+                    {/* trailer_number */}
+                    <div className="col-md-4">
+                        <label>Trailer Number</label>
+                        <input
+                            type="text"
+                            name="trailer_number"
+                            className="form-control"
+                            value={formData.trailer_number || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("trailer_number")}
+                        />
+                    </div>
+
+                    {/* poe */}
+                    <div className="col-md-4">
+                        <label>POE</label>
+                        {isEditing && isFieldEditable("poe") ? (
+                            <select
+                                className="form-control"
+                                name="poe"
+                                value={formData.poe || ""}
+                                onChange={handleChange}
+                            >
+                                <option value="">Select POE</option>
+                                <option value="Coutts, AB (0705)">Coutts, AB (0705)</option>
+                                <option value="Sarnia,ON(3802)">Sarnia,ON(3802)</option>
+                                <option value="Windsor,ON(3801)">Windsor,ON(3801)</option>
+                            </select>
+                        ) : formData.poe ? (
+                            <input type="text" className="form-control" value={formData.poe} readOnly/>
+                        ) : null}
+                    </div>
+
+                    {/* cross_border_location */}
+                    <div className="col-md-4">
+                        <label>Cross Border Location</label>
+                        <input
+                            type="text"
+                            name="cross_border_location"
+                            className="form-control"
+                            value={formData.cross_border_location || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("cross_border_location")}
+                        />
+                    </div>
+
+                    {/* supportor */}
+                    <div className="col-md-4">
+                        <label>Supportor</label>
+                        <input
+                            type="text"
+                            name="supportor"
+                            className="form-control"
+                            value={formData.supportor || ""}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("supportor")}
+                        />
+                    </div>
+
+                    {/* gps_link */}
+                    <div className="col-md-4">
+                        <label>GPS Link</label>
+                        <div style={{position: "relative"}}>
+                            <input
+                                type="text"
+                                name="gps_link"
+                                className="form-control"
+                                value={formData.gps_link || ""}
+                                onChange={handleChange}
+                                readOnly={!isFieldEditable("gps_link")}
+                                style={{
+                                    cursor: formData.gps_link && !isFieldEditable("gps_link") ? "pointer" : "text"
+                                }}
+                                onClick={() => {
+                                    if (!isFieldEditable("gps_link") && formData.gps_link) {
+                                        window.open(formData.gps_link, "_blank");
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+
+
+                    {/* pars (array) */}
+                    <div className="col-md-6">
+                        <label>PARS</label>
+                        {formData.pars?.map((val, idx) => (
+                            <div className="mb-2 d-flex align-items-center" key={idx}>
+                                <input
+                                    type="text"
+                                    className="form-control me-2"
+                                    value={val}
+                                    onChange={(e) => handleArrayChange("pars", idx, e.target.value)}
+                                    readOnly={!isFieldEditable("pars")}
+                                />
+                                {isEditing && isFieldEditable("pars") && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-outline-danger me-1"
+                                            onClick={() => removeField("pars", idx)}
+                                        >
+                                            −
+                                        </button>
+                                        {idx === formData.pars.length - 1 && (
                                             <button
                                                 type="button"
-                                                className="btn btn-sm btn-outline-danger me-1"
-                                                onClick={() => removeField(field, idx)}
+                                                className="btn btn-sm btn-outline-primary"
+                                                onClick={() => addField("pars")}
                                             >
-                                                −
+                                                +
                                             </button>
-                                            {idx === formData[field].length - 1 && (
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-sm btn-outline-primary"
-                                                    onClick={() => addField(field)}
-                                                >
-                                                    +
-                                                </button>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            ))
-                        ) : (
-                            <input
-                                type={
-                                    field.includes("price")
-                                        ? "number"
-                                        : field === "pickup_time"
-                                            ? "datetime-local"
-                                            : "text"
-                                }
-                                step={field.includes("price") ? "0.01" : undefined}
-                                name={field}
-                                className="form-control"
-                                value={formData[field] || ""}
-                                onChange={handleChange}
-                                readOnly={!isFieldEditable(field)}
-                            />
-                        )}
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        ))}
                     </div>
-                ))}
+
+                    {/* transaction_number (array) */}
+                    <div className="col-md-6">
+                        <label>Transaction Number</label>
+                        {formData.transaction_number?.map((val, idx) => (
+                            <div className="mb-2 d-flex align-items-center" key={idx}>
+                                <input
+                                    type="text"
+                                    className="form-control me-2"
+                                    value={val}
+                                    onChange={(e) => handleArrayChange("transaction_number", idx, e.target.value)}
+                                    readOnly={!isFieldEditable("transaction_number")}
+                                />
+                                {isEditing && isFieldEditable("transaction_number") && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-outline-danger me-1"
+                                            onClick={() => removeField("transaction_number", idx)}
+                                        >
+                                            −
+                                        </button>
+                                        {idx === formData.transaction_number.length - 1 && (
+                                            <button
+                                                type="button"
+                                                className="btn btn-sm btn-outline-primary"
+                                                onClick={() => addField("transaction_number")}
+                                            >
+                                                +
+                                            </button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
 
                 {isEditing && (
-                    <button type="submit" className="btn btn-primary">
+                    <button type="submit" className="btn btn-primary mt-4">
                         Save Changes
                     </button>
                 )}

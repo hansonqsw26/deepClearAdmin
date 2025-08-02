@@ -157,7 +157,6 @@ const TicketsList = () => {
                             <th>Pickup</th>
                             <th>Delivery</th>
                             <th>POE</th>
-                            <th>Cross Border</th>
                             <th>Pickup Time</th>
                             <th>Transaction #</th>
                             <th>Created At</th>
@@ -173,7 +172,6 @@ const TicketsList = () => {
                                 <td>{ticket.pickup_address || "-"}</td>
                                 <td>{ticket.delivery_address || "-"}</td>
                                 <td>{ticket.poe || "-"}</td>
-                                <td>{ticket.cross_border_location || "-"}</td>
                                 <td>
                                     {ticket.pickup_time
                                         ? new Date(ticket.pickup_time).toLocaleString("en-CA", {

@@ -88,15 +88,6 @@ const TicketsList = () => {
                     <input
                         type="text"
                         className="form-control"
-                        placeholder="Filter by Main ID"
-                        value={mainIdFilter}
-                        onChange={(e) => setMainIdFilter(e.target.value)}
-                    />
-                </div>
-                <div className="col-md-3">
-                    <input
-                        type="text"
-                        className="form-control"
                         placeholder="Filter by Container #"
                         value={containerNumberFilter}
                         onChange={(e) => setContainerNumberFilter(e.target.value)}
@@ -151,27 +142,34 @@ const TicketsList = () => {
                     <table className="table table-striped table-bordered table-hover align-middle mb-0">
                         <thead className="table-dark sticky-top">
                         <tr>
+                            <th>Action</th>
                             <th>Reference #</th>
                             <th>Client</th>
                             <th>Container #</th>
                             <th>Pickup</th>
                             <th>Delivery</th>
-                            <th>POE</th>
                             <th>Pickup Time</th>
                             <th>Transaction #</th>
                             <th>Created At</th>
-                            <th>Action</th>
                         </tr>
                         </thead>
                         <tbody>
                         {tickets.map((ticket, i) => (
                             <tr key={ticket.truck_ticket_id || i}>
+                                <td>
+                                    <button
+                                        className="btn btn-sm btn-info"
+                                        onClick={() => navigate(`/ticket-details?reference=${ticket.reference_number}`)}
+                                    >
+                                        View Details
+                                    </button>
+
+                                </td>
                                 <td>{ticket.reference_number || "-"}</td>
                                 <td>{ticket.client_name || "-"}</td>
                                 <td>{ticket.container_number || "-"}</td>
                                 <td>{ticket.pickup_address || "-"}</td>
                                 <td>{ticket.delivery_address || "-"}</td>
-                                <td>{ticket.poe || "-"}</td>
                                 <td>
                                     {ticket.pickup_time
                                         ? new Date(ticket.pickup_time).toLocaleString("en-CA", {
@@ -188,15 +186,6 @@ const TicketsList = () => {
                                             hour12: false,
                                         })
                                         : "-"}
-                                </td>
-                                <td>
-                                    <button
-                                        className="btn btn-sm btn-info"
-                                        onClick={() => navigate(`/ticket-details?reference=${ticket.reference_number}`)}
-                                    >
-                                        View Details
-                                    </button>
-
                                 </td>
                             </tr>
                         ))}

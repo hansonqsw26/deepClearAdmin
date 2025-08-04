@@ -19,6 +19,21 @@ const TicketDetails = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [department, setDepartment] = useState(null);
 
+    const formatDateTimeLocal = (datetime) => {
+        if (!datetime) return "";
+        const date = new Date(datetime);
+        const tzOffset = date.getTimezoneOffset() * 60000; // in milliseconds
+        const localISOTime = new Date(date - tzOffset).toISOString().slice(0, 16);
+        return localISOTime;
+    };
+
+    const formatDateOnly = (datetime) => {
+        if (!datetime) return "";
+        const date = new Date(datetime);
+        return date.toISOString().slice(0, 10); // "YYYY-MM-DD"
+    };
+
+
     const editableFieldsForDept2 = [
         "carrier_name",
         "ein_number",
@@ -319,6 +334,21 @@ const TicketDetails = () => {
                             readOnly={!isFieldEditable("pickup_address")}
                         />
                     </div>
+
+                    {/* pickup_time */}
+                    <div className="col-md-6">
+                        <label>Pickup Date</label>
+                        <input
+                            type="date"
+                            name="pickup_time"
+                            className="form-control"
+                            value={formatDateOnly(formData.pickup_time)}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("pickup_time")}
+                        />
+                    </div>
+
+
                     <div className="col-md-6">
                         <label>Delivery Address</label>
                         <input
@@ -330,6 +360,20 @@ const TicketDetails = () => {
                             readOnly={!isFieldEditable("delivery_address")}
                         />
                     </div>
+
+                    <div className="col-md-6">
+                        <label>Delivery Date</label>
+                        <input
+                            type="date"
+                            name="delivery_time"
+                            className="form-control"
+                            value={formatDateOnly(formData.delivery_time)}
+                            onChange={handleChange}
+                            readOnly={!isFieldEditable("delivery_time")}
+                        />
+                    </div>
+
+
                 </div>
 
                 <h5 className="mb-3 mt-4">Customer Information</h5>
@@ -446,18 +490,6 @@ const TicketDetails = () => {
                         </div>
 
                         <div className="row g-3">
-                            {/* pickup_time */}
-                            <div className="col-md-4">
-                                <label>Pickup Time</label>
-                                <input
-                                    type="datetime-local"
-                                    name="pickup_time"
-                                    className="form-control"
-                                    value={formData.pickup_time || ""}
-                                    onChange={handleChange}
-                                    readOnly={!isFieldEditable("pickup_time")}
-                                />
-                            </div>
 
                             {/* load_number */}
                             <div className="col-md-4">

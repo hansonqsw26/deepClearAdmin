@@ -318,6 +318,18 @@ const TicketDetails = () => {
                         />
                     </div>
 
+                    <div className="col-md-4">
+                        <label>Note</label>
+                        <input
+                            type="text"
+                            name="note"
+                            className="form-control"
+                            value={formData.note || ""}
+                            onChange={handleChange}
+                            readOnly={!isEditing}
+                        />
+                    </div>
+
                 </div>
 
                 {/* Section 2: Addresses */}

@@ -148,8 +148,8 @@ const TicketsList = () => {
                             <th>Container #</th>
                             <th>Pickup</th>
                             <th>Delivery</th>
-                            <th>Pickup Time</th>
                             <th>Transaction #</th>
+                            <th>Note</th>
                             <th>Created At</th>
                         </tr>
                         </thead>
@@ -170,15 +170,8 @@ const TicketsList = () => {
                                 <td>{ticket.container_number || "-"}</td>
                                 <td>{ticket.pickup_address || "-"}</td>
                                 <td>{ticket.delivery_address || "-"}</td>
-                                <td>
-                                    {ticket.pickup_time
-                                        ? new Date(ticket.pickup_time).toLocaleString("en-CA", {
-                                            timeZone: "America/Toronto",
-                                            hour12: false,
-                                        })
-                                        : "-"}
-                                </td>
                                 <td>{ticket.transaction_number || "-"}</td>
+                                <td>{ticket.note || "-"}</td>
                                 <td>
                                     {ticket.main_create_date
                                         ? new Date(ticket.main_create_date).toLocaleString("en-CA", {

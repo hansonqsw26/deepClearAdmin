@@ -13,10 +13,24 @@ const TicketsList = () => {
     const [mainIdFilter, setMainIdFilter] = useState("");
     const [containerNumberFilter, setContainerNumberFilter] = useState("");
     const [transactionNumberFilter, setTransactionNumberFilter] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
 
     const [selectedTicket, setSelectedTicket] = useState(null);
-    const [refreshFlag, setRefreshFlag] = useState(false); // <-- new
+    const [refreshFlag, setRefreshFlag] = useState(false);
     const navigate = useNavigate();
+
+    const statusMap = {
+        0: "Pending Pickup",
+        1: "Picked Up – In Transit",
+        2: "Crossed Border",
+        3: "Arrived",
+        4: "Unloaded (Customer Option)",
+        5: "Order Completed",
+        6: "Pending Invoice (Hidden from Customer)",
+        7: "Invoiced",
+        8: "Payment Received",
+    };
+
     const fetchTickets = async () => {
         setLoading(true);
         setError("");
@@ -25,6 +39,7 @@ const TicketsList = () => {
             if (mainIdFilter.trim()) body.main_id = mainIdFilter.trim();
             if (containerNumberFilter.trim()) body.container_number = containerNumberFilter.trim();
             if (transactionNumberFilter.trim()) body.transaction_number = transactionNumberFilter.trim();
+            if (statusFilter !== "") body.status = Number(statusFilter);
 
             const res = await fetch("https://deepclear.ca/api/admin/fetchTruckTickets", {
                 method: "POST",
@@ -54,13 +69,13 @@ const TicketsList = () => {
     useEffect(() => {
         fetchTickets();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [page, limit, refreshFlag]);  // <-- added refreshFlag here
+    }, [page, limit, refreshFlag]);
 
     useEffect(() => {
         setPage(1);
         fetchTickets();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mainIdFilter, containerNumberFilter, transactionNumberFilter]);
+    }, [mainIdFilter, containerNumberFilter, transactionNumberFilter, statusFilter]);
 
     const totalPages = Math.max(1, Math.ceil(totalTickets / limit));
 
@@ -71,7 +86,7 @@ const TicketsList = () => {
                 truckId={selectedTicket.truck_ticket_id}
                 onBack={() => {
                     setSelectedTicket(null);
-                    setRefreshFlag((prev) => !prev); // toggle to refresh list
+                    setRefreshFlag((prev) => !prev);
                 }}
             />
         );
@@ -102,6 +117,23 @@ const TicketsList = () => {
                         onChange={(e) => setTransactionNumberFilter(e.target.value)}
                     />
                 </div>
+
+                <div className="col-md-3 d-flex align-items-center">
+                    <select
+                        className="form-select me-3"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        aria-label="Filter by Status"
+                    >
+                        <option value="">All Statuses</option>
+                        {Object.entries(statusMap).map(([key, label]) => (
+                            <option key={key} value={key}>
+                                {label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
                 <div className="col-md-3 d-flex align-items-center">
                     <select
                         className="form-select me-3"
@@ -143,6 +175,7 @@ const TicketsList = () => {
                         <thead className="table-dark sticky-top">
                         <tr>
                             <th>Action</th>
+                            <th>Status</th>
                             <th>Reference #</th>
                             <th>Client</th>
                             <th>Container #</th>
@@ -159,12 +192,14 @@ const TicketsList = () => {
                                 <td>
                                     <button
                                         className="btn btn-sm btn-info"
-                                        onClick={() => navigate(`/ticket-details?reference=${ticket.reference_number}`)}
+                                        onClick={() =>
+                                            navigate(`/ticket-details?reference=${ticket.reference_number}`)
+                                        }
                                     >
                                         View Details
                                     </button>
-
                                 </td>
+                                <td>{statusMap[ticket.status] || "-"}</td>
                                 <td>{ticket.reference_number || "-"}</td>
                                 <td>{ticket.client_name || "-"}</td>
                                 <td>{ticket.container_number || "-"}</td>
@@ -196,12 +231,12 @@ const TicketsList = () => {
                     Previous
                 </button>
                 <span>
-          Page {page} of {Math.max(1, Math.ceil(totalTickets / limit))}
+          Page {page} of {totalPages}
         </span>
                 <button
                     className="btn btn-outline-primary"
-                    onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(totalTickets / limit)), p + 1))}
-                    disabled={page === Math.max(1, Math.ceil(totalTickets / limit))}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
                 >
                     Next
                 </button>

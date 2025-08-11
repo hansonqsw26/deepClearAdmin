@@ -25,10 +25,9 @@ const TicketsList = () => {
         2: "Crossed Border",
         3: "Arrived",
         4: "Unloaded (Customer Option)",
-        5: "Order Completed",
-        6: "Pending Invoice (Hidden from Customer)",
-        7: "Invoiced",
-        8: "Payment Received",
+        5: "Pending Invoice (Hidden from Customer)",
+        6: "Invoiced",
+        7: "Payment Received",
     };
 
     const fetchTickets = async () => {

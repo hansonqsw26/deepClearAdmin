@@ -328,15 +328,21 @@ const TicketDetails = () => {
                             disabled={!isEditing} // use disabled instead of readOnly for select
                         >
                             <option value="0">Pending Pickup</option>
-                            <option value="1">Picked Up</option>
-                            <option value="2">In Transit</option>
-                            <option value="3">Delivered</option>
+                            <option value="1">Picked Up – In Transit</option>
+                            <option value="2">Crossed Border</option>
+                            <option value="3">Arrived</option>
+                            <option value="4">Unloaded (Customer Option)</option>
+                            <option value="5">Pending Invoice (Hidden from Customer)</option>
+                            <option value="6">Invoiced</option>
+                            <option value="7">Payment Received</option>
+
+
                         </select>
                     </div>
 
 
                     <div className="col-md-4">
-                        <label>Note</label>
+                    <label>Note</label>
                         <input
                             type="text"
                             name="note"

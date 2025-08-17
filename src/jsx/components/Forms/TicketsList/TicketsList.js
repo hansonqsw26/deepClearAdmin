@@ -30,6 +30,18 @@ const TicketsList = () => {
         7: "Payment Received",
     };
 
+    const cbStatusMap = {
+        0: "No",
+        1: "Yes"
+    };
+
+
+    const formatDateTimeLocal = (datetime) => {
+        if (!datetime) return "";
+        const date = new Date(datetime);
+        return date.toISOString().slice(0, 10);
+    };
+
     const fetchTickets = async () => {
         setLoading(true);
         setError("");
@@ -95,6 +107,34 @@ const TicketsList = () => {
         <div className="container mt-4">
             <div className="bg-primary text-white rounded px-3 py-2 mb-4 text-center">
                 <h2 className="mb-0">Truck Tickets List</h2>
+            </div>
+
+            {/* 🔹 Quick Filter Buttons */}
+            <div className="mb-3 d-flex gap-2">
+                <button
+                    className={`btn ${statusFilter === "0" ? "btn-primary" : "btn-outline-primary"}`}
+                    onClick={() => setStatusFilter("0")}
+                >
+                    Pending Pickup
+                </button>
+                <button
+                    className={`btn ${statusFilter === "1" ? "btn-primary" : "btn-outline-primary"}`}
+                    onClick={() => setStatusFilter("1")}
+                >
+                    Picked Up – In Transit
+                </button>
+                <button
+                    className={`btn ${statusFilter === "3" ? "btn-primary" : "btn-outline-primary"}`}
+                    onClick={() => setStatusFilter("3")}
+                >
+                    Arrived
+                </button>
+                <button
+                    className={`btn ${statusFilter === "" ? "btn-secondary" : "btn-outline-secondary"}`}
+                    onClick={() => setStatusFilter("")}
+                >
+                    All
+                </button>
             </div>
 
             <div className="row mb-4 g-3">
@@ -179,9 +219,14 @@ const TicketsList = () => {
                             <th>Client</th>
                             <th>Container #</th>
                             <th>Pickup</th>
+                            <th>Pickup Time</th>
                             <th>Delivery</th>
+                            <th>Delivery Time</th>
+                            <th>POE</th>
                             <th>Transaction #</th>
+                            <th>Customs Brokerage</th>
                             <th>Note</th>
+                            <th>GPS</th>
                             <th>Created At</th>
                         </tr>
                         </thead>
@@ -203,9 +248,28 @@ const TicketsList = () => {
                                 <td>{ticket.client_name || "-"}</td>
                                 <td>{ticket.container_number || "-"}</td>
                                 <td>{ticket.pickup_address || "-"}</td>
+                                <td>{formatDateTimeLocal(ticket.pickup_time) || "-"}</td>
                                 <td>{ticket.delivery_address || "-"}</td>
+                                <td>{formatDateTimeLocal(ticket.delivery_time) || "-"}</td>
+                                <td>{ticket.poe || "-"}</td>
                                 <td>{ticket.transaction_number || "-"}</td>
+                                <td>{cbStatusMap[ticket.cb_status] ?? "-"}</td>
                                 <td>{ticket.note || "-"}</td>
+                                <td>
+                                    {ticket.gps_link ? (
+                                        <a
+                                            href={ticket.gps_link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="btn btn-sm btn-outline-success"
+                                        >
+                                            View GPS
+                                        </a>
+                                    ) : (
+                                        "-"
+                                    )}
+                                </td>
+
                                 <td>
                                     {ticket.main_create_date
                                         ? new Date(ticket.main_create_date).toLocaleString("en-CA", {

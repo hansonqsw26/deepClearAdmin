@@ -319,6 +319,21 @@ const TicketDetails = () => {
                     </div>
 
                     <div className="col-md-4">
+                        <label>Customs Status</label>
+                        <select
+                            name="cb_status"
+                            className="form-control"
+                            value={formData.cb_status ?? "0"} // default to "0" if null/undefined
+                            onChange={handleChange}
+                            disabled={!isEditing} // use disabled instead of readOnly for select
+                        >
+                            <option value="0">No</option>
+                            <option value="1">Yes</option>
+                        </select>
+                    </div>
+
+
+                    <div className="col-md-4">
                         <label>Status</label>
                         <select
                             name="status"
@@ -342,7 +357,7 @@ const TicketDetails = () => {
 
 
                     <div className="col-md-4">
-                    <label>Note</label>
+                        <label>Note</label>
                         <input
                             type="text"
                             name="note"

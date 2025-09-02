@@ -105,12 +105,11 @@ const CustomsTicketsList = () => {
                         <thead className="table-dark sticky-top">
                         <tr>
                             <th>Action</th>
-                            <th>Main ID</th>
                             <th>Client</th>
                             <th>Reference #</th>
                             <th>Container #</th>
                             <th>Transaction #</th>
-                            <th>CB Status</th>
+                            <th>Customs Status</th>
                             <th>Status</th>
                             <th>CAD Status</th>
                             <th>Destination</th>
@@ -132,7 +131,6 @@ const CustomsTicketsList = () => {
                                         View Details
                                     </button>
                                 </td>
-                                <td>{ticket.main_id || "-"}</td>
                                 <td>{ticket.client_name || "-"}</td>
                                 <td>{ticket.reference_number || "-"}</td>
                                 <td>{ticket.container_number || "-"}</td>

@@ -19,22 +19,22 @@ export const NAVTOGGLE = 'NAVTOGGLE';
 
 
 export function signupAction(email, password, navigate) {
-	
+
     return (dispatch) => {
         signUp(email, password)
-        .then((response) => {
-            saveTokenInLocalStorage(response.data);
-            runLogoutTimer(
-                dispatch,
-                response.data.expiresIn * 1000,            
-            );
-            dispatch(confirmedSignupAction(response.data));
-            navigate('/dashboard');			
-        })
-        .catch((error) => {
-            const errorMessage = formatError(error.response.data);
-            dispatch(signupFailedAction(errorMessage));
-        });
+            .then((response) => {
+                saveTokenInLocalStorage(response.data);
+                runLogoutTimer(
+                    dispatch,
+                    response.data.expiresIn * 1000,
+                );
+                dispatch(confirmedSignupAction(response.data));
+                navigate('/dashboard');
+            })
+            .catch((error) => {
+                const errorMessage = formatError(error.response.data);
+                dispatch(signupFailedAction(errorMessage));
+            });
     };
 }
 
@@ -120,7 +120,7 @@ export function loadingToggleAction(status) {
 }
 
 export const navtoggle = () => {
-    return {        
-      type: 'NAVTOGGLE',
+    return {
+        type: 'NAVTOGGLE',
     };
 };

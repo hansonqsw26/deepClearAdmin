@@ -95,8 +95,18 @@ export const MenuList = [
             },
 
             {
-                title: 'Tickets List',
+                title: 'Truck Tickets List',
                 to: 'tickets-list',
+            },
+
+            {
+                title: 'Create Customs Brokerage Ticket',
+                to: 'create-customs-ticket',
+            },
+
+            {
+                title: 'Customs Brokerage Tickets List',
+                to: 'customs-tickets-list',
             },
         ]
 

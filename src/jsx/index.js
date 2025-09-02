@@ -124,6 +124,9 @@ import CreateClientUser from "./components/Forms/CreateAccount/CreateClientUser"
 import CreateTruckTicket from "./components/Forms/CreateTicket/CreateTruckTicket";
 import TicketsList from "./components/Forms/TicketsList/TicketsList";
 import TicketDetails from "./components/Forms/TicketsList/TicketDetails";
+import CreateCBTicket from "./components/Forms/CreateTicket/CreateCBTicket";
+import CustomsTicketsList from "./components/Forms/TicketsList/CustomsTicketList";
+import CustomsTicketDetails from "./components/Forms/TicketsList/CustomsTicketDetails";
 
 const Markup = () => {
 
@@ -135,8 +138,11 @@ const Markup = () => {
     { url: "create-admin-account", component: <CreateAdminUser /> },
     { url: "create-client-account", component: <CreateClientUser /> },
     { url: "create-truck-ticket", component: <CreateTruckTicket /> },
+    { url: "create-customs-ticket", component: <CreateCBTicket /> },
     { url: "tickets-list", component: <TicketsList /> },
+    { url: "customs-tickets-list", component: <CustomsTicketsList /> },
     { url: "ticket-details", component: <TicketDetails /> },
+    { url: "customs-ticket-details", component: <CustomsTicketDetails /> },
     { url: "dashboard", component: <Home /> },
     { url: "dashboard-dark", component: <DashboardDark/> },
     { url: "my-wallet", component: <MyWallet/> },

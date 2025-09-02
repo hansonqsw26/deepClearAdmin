@@ -77,13 +77,13 @@ const CustomsTicketDetails = () => {
             const data = await res.json();
 
             if (res.ok) {
-                setMessage("✅ Ticket updated successfully.");
+                setMessage("Ticket updated successfully.");
                 setIsEditing(false);
             } else {
-                setMessage(`❌ Update failed: ${data.error || "Unknown error"}`);
+                setMessage(`Update failed: ${data.error || "Unknown error"}`);
             }
         } catch {
-            setMessage("❌ Network or server error.");
+            setMessage("Network or server error.");
         }
     };
 
@@ -142,7 +142,7 @@ const CustomsTicketDetails = () => {
                         />
                     </div>
                     <div className="col-md-4">
-                        <label>CB Status</label>
+                        <label>Customs Status</label>
                         <select
                             name="cb_status"
                             className="form-control"

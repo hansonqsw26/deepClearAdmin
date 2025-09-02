@@ -140,7 +140,7 @@ const TicketDetails = () => {
         delete payload.truck_ticket_id;
 
         if (!payload.main_id || !payload.truck_id || !payload.truck_details_id) {
-            setMessage("❌ Missing required fields: main_id, truck_id, or truck_details_id");
+            setMessage(" Missing required fields: main_id, truck_id, or truck_details_id");
             return;
         }
 
@@ -158,10 +158,10 @@ const TicketDetails = () => {
                 setIsEditing(false);
                 setOriginalData(formData);
             } else {
-                setMessage(`❌ Update failed: ${data.error || "Unknown error"}`);
+                setMessage(`Update failed: ${data.error || "Unknown error"}`);
             }
         } catch {
-            setMessage("❌ Network or server error.");
+            setMessage("Network or server error.");
         }
     };
 

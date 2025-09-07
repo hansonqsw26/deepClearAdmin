@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, {useEffect, useState} from "react";
+import {useLocation, useNavigate} from "react-router-dom";
 
 function useQuery() {
     return new URLSearchParams(useLocation().search);
@@ -18,7 +18,9 @@ const TicketDetails = () => {
     const [message, setMessage] = useState("");
     const [isEditing, setIsEditing] = useState(false);
     const [department, setDepartment] = useState(null);
-
+    const [podFiles, setPodFiles] = useState([]);
+    const [selectedPodFile, setSelectedPodFile] = useState(null);
+    const [uploadingPod, setUploadingPod] = useState(false);
     const formatDateTimeLocal = (datetime) => {
         if (!datetime) return "";
         const date = new Date(datetime);
@@ -67,8 +69,8 @@ const TicketDetails = () => {
             try {
                 const res = await fetch("https://deepclear.ca/api/admin/fetchTruckTickets", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ reference_number: referenceNumber }),
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({reference_number: referenceNumber}),
                 });
                 const data = await res.json();
 
@@ -97,16 +99,96 @@ const TicketDetails = () => {
         fetchTicketDetails();
     }, [referenceNumber]);
 
+
+// --- FETCH POD FILES ---
+    const fetchPodFiles = async () => {
+        if (!ticket?.truck_ticket_id) return;
+        try {
+            const res = await fetch("https://deepclear.ca/api/admin/getFiles", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    ticket_id: ticket.truck_ticket_id,
+                    container_number: ticket.container_number,
+                    file_type: "pod",
+                }),
+            });
+            const data = await res.json();
+            if (res.ok && data.files) {
+                // Ensure it's always an array
+                const filesArray = Array.isArray(data.files) ? data.files : [data.files];
+                setPodFiles(filesArray);
+            } else {
+                setPodFiles([]);
+            }
+        } catch {
+            setPodFiles([]);
+        }
+    };
+
+// Fetch POD files when ticket is loaded
+    useEffect(() => {
+        if (ticket) fetchPodFiles();
+    }, [ticket]);
+
+// --- HANDLE FILE SELECTION ---
+    const handlePodFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const allowedExtensions = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg"];
+        const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+        if (!allowedExtensions.includes(ext)) {
+            alert("Invalid file type. Only PDF, Word, Excel, PNG, JPG, JPEG are allowed.");
+            e.target.value = "";
+            return;
+        }
+        setSelectedPodFile(file);
+    };
+
+// --- UPLOAD POD FILE ---
+    const handleUploadPod = async () => {
+        if (!ticket?.truck_ticket_id) return alert("Ticket info missing.");
+        if (!selectedPodFile) return alert("Please select a file first.");
+
+        setUploadingPod(true);
+        try {
+            const formDataToSend = new FormData();
+            formDataToSend.append("file", selectedPodFile);
+            formDataToSend.append("ticket_id", ticket.truck_ticket_id);
+            formDataToSend.append("container_number", ticket.container_number);
+            formDataToSend.append("file_type", "pod");
+
+            const res = await fetch("https://deepclear.ca/api/admin/uploadFile", {
+                method: "POST",
+                body: formDataToSend,
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                alert("✅ POD file uploaded!");
+                setSelectedPodFile(null);
+                fetchPodFiles(); // refresh list
+            } else {
+                alert(data.error || "Upload failed.");
+            }
+        } catch {
+            alert("Upload failed.");
+        }
+        setUploadingPod(false);
+    };
+
+
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        const {name, value} = e.target;
+        setFormData((prev) => ({...prev, [name]: value}));
     };
 
     const handleArrayChange = (field, index, value) => {
         setFormData((prev) => {
             const updated = [...(prev[field] || [])];
             updated[index] = value;
-            return { ...prev, [field]: updated };
+            return {...prev, [field]: updated};
         });
     };
 
@@ -121,7 +203,7 @@ const TicketDetails = () => {
         setFormData((prev) => {
             const updated = [...(prev[field] || [])];
             updated.splice(index, 1);
-            return { ...prev, [field]: updated };
+            return {...prev, [field]: updated};
         });
     };
 
@@ -147,7 +229,7 @@ const TicketDetails = () => {
         try {
             const res = await fetch("https://deepclear.ca/api/admin/uploadTruckTickets", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(payload),
             });
 
@@ -234,7 +316,7 @@ const TicketDetails = () => {
                     <option value="Windsor,ON(3801)">Windsor,ON(3801)</option>
                 </select>
             ) : formData.poe ? (
-                <input type="text" className="form-control" value={formData.poe} readOnly />
+                <input type="text" className="form-control" value={formData.poe} readOnly/>
             ) : null;
         }
 
@@ -668,8 +750,6 @@ const TicketDetails = () => {
                             />
                         </div>
                     </div>
-
-
                 </div>
 
                 {isEditing && (
@@ -679,6 +759,25 @@ const TicketDetails = () => {
                 )}
                 {message && <p className="mt-3">{message}</p>}
             </form>
+
+            <h5 className="mb-3 mt-4">POD Files</h5>
+            {podFiles.length === 0 ? (
+                <p>No POD files uploaded yet.</p>
+            ) : (
+                <div className="list-group mb-3">
+                    {podFiles.map((file) => (
+                        <a
+                            key={file.file_id}
+                            href={file.file_link}  // <- use file_link
+                            target="_blank"
+                            rel="noreferrer"
+                            className="list-group-item list-group-item-action"
+                        >
+                            {file.file_name || "Unnamed file"}
+                        </a>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

@@ -160,7 +160,9 @@ const CustomsTicketsList = () => {
                                         ? "Not Uploaded"
                                         : ticket.cad_status === 1
                                             ? "Uploaded"
-                                            : "-"}
+                                            : ticket.cad_status === 2
+                                                ? "Confirm"
+                                                : "-"}
                                 </td>
                                 <td>{ticket.destination || "-"}</td>
                                 <td>{ticket.eta ? new Date(ticket.eta).toLocaleDateString() : "-"}</td>

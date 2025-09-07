@@ -248,6 +248,7 @@ const CustomsTicketDetails = () => {
                         <select name="cad_status" className="form-control" value={formData.cad_status} disabled>
                             <option value="0">Not Uploaded</option>
                             <option value="1">Uploaded</option>
+                            <option value="2">Confirmed</option>
                         </select>
                     </div>
                     <div className="col-md-4">

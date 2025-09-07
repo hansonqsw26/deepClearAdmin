@@ -1,5 +1,5 @@
-import React, {useEffect, useState} from "react";
-import {useLocation, useNavigate} from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 function useQuery() {
     return new URLSearchParams(useLocation().search);
@@ -69,8 +69,8 @@ const TicketDetails = () => {
             try {
                 const res = await fetch("https://deepclear.ca/api/admin/fetchTruckTickets", {
                     method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({reference_number: referenceNumber}),
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reference_number: referenceNumber }),
                 });
                 const data = await res.json();
 
@@ -106,7 +106,7 @@ const TicketDetails = () => {
         try {
             const res = await fetch("https://deepclear.ca/api/admin/getFiles", {
                 method: "POST",
-                headers: {"Content-Type": "application/json"},
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ticket_id: ticket.truck_ticket_id,
                     container_number: ticket.container_number,
@@ -179,16 +179,17 @@ const TicketDetails = () => {
     };
 
 
+
     const handleChange = (e) => {
-        const {name, value} = e.target;
-        setFormData((prev) => ({...prev, [name]: value}));
+        const { name, value } = e.target;
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleArrayChange = (field, index, value) => {
         setFormData((prev) => {
             const updated = [...(prev[field] || [])];
             updated[index] = value;
-            return {...prev, [field]: updated};
+            return { ...prev, [field]: updated };
         });
     };
 
@@ -203,7 +204,7 @@ const TicketDetails = () => {
         setFormData((prev) => {
             const updated = [...(prev[field] || [])];
             updated.splice(index, 1);
-            return {...prev, [field]: updated};
+            return { ...prev, [field]: updated };
         });
     };
 
@@ -229,7 +230,7 @@ const TicketDetails = () => {
         try {
             const res = await fetch("https://deepclear.ca/api/admin/uploadTruckTickets", {
                 method: "POST",
-                headers: {"Content-Type": "application/json"},
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
 
@@ -316,7 +317,7 @@ const TicketDetails = () => {
                     <option value="Windsor,ON(3801)">Windsor,ON(3801)</option>
                 </select>
             ) : formData.poe ? (
-                <input type="text" className="form-control" value={formData.poe} readOnly/>
+                <input type="text" className="form-control" value={formData.poe} readOnly />
             ) : null;
         }
 
@@ -761,6 +762,8 @@ const TicketDetails = () => {
             </form>
 
             <h5 className="mb-3 mt-4">POD Files</h5>
+
+            {/* List existing POD files */}
             {podFiles.length === 0 ? (
                 <p>No POD files uploaded yet.</p>
             ) : (
@@ -768,7 +771,7 @@ const TicketDetails = () => {
                     {podFiles.map((file) => (
                         <a
                             key={file.file_id}
-                            href={file.file_link}  // <- use file_link
+                            href={file.file_link}  // Correct API key
                             target="_blank"
                             rel="noreferrer"
                             className="list-group-item list-group-item-action"
@@ -778,6 +781,25 @@ const TicketDetails = () => {
                     ))}
                 </div>
             )}
+
+            <div className="input-group mb-3">
+                <input
+                    type="file"
+                    className="form-control"
+                    onChange={handlePodFileChange}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                />
+                <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={handleUploadPod}
+                    disabled={uploadingPod || !selectedPodFile}
+                >
+                    {uploadingPod ? "Uploading..." : "Upload POD"}
+                </button>
+            </div>
+
+
         </div>
     );
 };

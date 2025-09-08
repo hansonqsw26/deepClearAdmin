@@ -26,6 +26,8 @@ const CustomsTicketDetails = () => {
         "release cad": [],
         bol: [],
         emf: [],
+        "packing list": [],
+        "commercial invoice": [],
     });
     const [filesLoading, setFilesLoading] = useState(false);
 
@@ -102,7 +104,14 @@ const CustomsTicketDetails = () => {
     // --- Fetch all file types when ticket is loaded ---
     useEffect(() => {
         if (ticket?.container_number) {
-            ["draft cad", "release cad", "bol", "emf"].forEach(ft => fetchFiles(ft));
+            [
+                "draft cad",
+                "release cad",
+                "bol",
+                "emf",
+                "packing list",
+                "commercial invoice"
+            ].forEach(ft => fetchFiles(ft));
         }
     }, [ticket]);
 
@@ -282,7 +291,7 @@ const CustomsTicketDetails = () => {
             </form>
 
             {/* --- FILE SECTIONS --- */}
-            {["draft cad", "release cad", "bol", "emf"].map(ft => (
+            {["draft cad", "release cad", "bol", "emf", "packing list", "commercial invoice"].map(ft => (
                 <div key={ft}>
                     <hr />
                     <h4>{ft.toUpperCase()} Files</h4>

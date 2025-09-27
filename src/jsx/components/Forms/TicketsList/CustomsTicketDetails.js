@@ -23,6 +23,8 @@ const cbStatusLabels = {
     34: "Accepted/Awaiting Customs"
 };
 
+const allowedCbStatusCodes = [0,1,2,4,5,6,7,8,9,14,23,24,34];
+
 const CustomsTicketDetails = () => {
     const query = useQuery();
     const mainId = query.get("main_id");
@@ -91,7 +93,7 @@ const CustomsTicketDetails = () => {
         fetchTicket();
     }, [mainId]);
 
-    // --- FETCH FILES (GENERALIZED) ---
+    // --- FETCH FILES ---
     const fetchFiles = async (fileType) => {
         if (!cbId || !ticket?.container_number) return;
         setFilesLoading(true);
@@ -252,29 +254,32 @@ const CustomsTicketDetails = () => {
 
             <form onSubmit={handleSubmit}>
                 <div className="row g-3">
+                    {/* Container Number */}
                     <div className="col-md-4">
                         <label>Container Number</label>
                         <input type="text" name="container_number" className="form-control"
                                value={formData.container_number} onChange={handleChange} readOnly={!isEditing} />
                     </div>
 
+                    {/* CBSA Status */}
                     <div className="col-md-4">
-                        <label>Customs Status</label>
+                        <label>CBSA Status</label>
                         <select name="cb_status" className="form-control" value={formData.cb_status} onChange={handleChange} disabled={!isEditing}>
-                            <option value="0">Not Submitted</option>
-                            <option value="1">Submitted</option>
-                            <option value="2">Release</option>
-                            <option value="3">Exam</option>
+                            {allowedCbStatusCodes.map(code => (
+                                <option key={code} value={code}>{cbStatusLabels[code]}</option>
+                            ))}
                         </select>
                     </div>
 
+                    {/* CBSA Status Time */}
                     <div className="col-md-4">
-                        <label>CBSA Status / Time</label>
+                        <label>CBSA Status Time</label>
                         <input type="text" className="form-control"
-                               value={`${cbStatusLabels[formData.cb_status] || "Unknown"}${formData.cb_status_time ? ` | ${new Date(formData.cb_status_time).toLocaleString()}` : ""}`}
+                               value={formData.cb_status_time ? new Date(formData.cb_status_time).toLocaleString() : ""}
                                readOnly />
                     </div>
 
+                    {/* CAD Status */}
                     <div className="col-md-4">
                         <label>CAD Status</label>
                         <select name="cad_status" className="form-control" value={formData.cad_status} disabled>
@@ -284,11 +289,13 @@ const CustomsTicketDetails = () => {
                         </select>
                     </div>
 
+                    {/* Transaction Number */}
                     <div className="col-md-4">
                         <label>Transaction Number</label>
                         <input type="text" name="transaction_number" className="form-control" value={formData.transaction_number} onChange={handleChange} readOnly={!isEditing} />
                     </div>
 
+                    {/* Status */}
                     <div className="col-md-4">
                         <label>Status</label>
                         <select name="status" className="form-control" value={formData.status} onChange={handleChange} disabled={!isEditing}>
@@ -298,16 +305,19 @@ const CustomsTicketDetails = () => {
                         </select>
                     </div>
 
+                    {/* Destination */}
                     <div className="col-md-4">
                         <label>Destination</label>
                         <input type="text" name="destination" className="form-control" value={formData.destination} onChange={handleChange} readOnly={!isEditing} />
                     </div>
 
+                    {/* ETA */}
                     <div className="col-md-4">
                         <label>ETA</label>
                         <input type="datetime-local" name="eta" className="form-control" value={formData.eta} onChange={handleChange} readOnly={!isEditing} />
                     </div>
 
+                    {/* Note */}
                     <div className="col-md-12">
                         <label>Note</label>
                         <textarea name="note" className="form-control" value={formData.note} onChange={handleChange} readOnly={!isEditing} />

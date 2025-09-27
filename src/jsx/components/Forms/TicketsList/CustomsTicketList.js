@@ -1,6 +1,34 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const cbStatusLabels = {
+    0: "Unknown",
+    1: "Accepted",
+    2: "Rejected",
+    4: "Released",
+    5: "Exam Required",
+    6: "Y51 Release",
+    7: "Released Instructions",
+    8: "Detain to Destination",
+    9: "Accepted/Waiting",
+    14: "Error",
+    23: "Authorized to deliver",
+    24: "Exam Required Instructions",
+    34: "Accepted/Awaiting Customs"
+};
+
+const statusLabels = {
+    0: "Reviewing",
+    1: "Processing",
+    2: "Finished"
+};
+
+const cadStatusLabels = {
+    0: "Not Uploaded",
+    1: "Uploaded",
+    2: "Confirmed"
+};
+
 const CustomsTicketsList = () => {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -89,9 +117,9 @@ const CustomsTicketsList = () => {
                         onChange={(e) => setSearchStatus(e.target.value)}
                     >
                         <option value="">All Statuses</option>
-                        <option value="0">Reviewing</option>
-                        <option value="1">Processing</option>
-                        <option value="2">Finished</option>
+                        {Object.entries(statusLabels).map(([key, label]) => (
+                            <option key={key} value={key}>{label}</option>
+                        ))}
                     </select>
                 </div>
             </div>
@@ -135,35 +163,9 @@ const CustomsTicketsList = () => {
                                 <td>{ticket.reference_number || "-"}</td>
                                 <td>{ticket.container_number || "-"}</td>
                                 <td>{ticket.transaction_number || "-"}</td>
-                                <td>
-                                    {ticket.cb_status === 0
-                                        ? "Not Submitted"
-                                        : ticket.cb_status === 1
-                                            ? "Submitted"
-                                            : ticket.cb_status === 2
-                                                ? "Release"
-                                                : ticket.cb_status === 3
-                                                    ? "Exam"
-                                                    : "-"}
-                                </td>
-                                <td>
-                                    {ticket.status === 0
-                                        ? "Reviewing"
-                                        : ticket.status === 1
-                                            ? "Processing"
-                                            : ticket.status === 2
-                                                ? "Finished"
-                                                : "-"}
-                                </td>
-                                <td>
-                                    {ticket.cad_status === 0
-                                        ? "Not Uploaded"
-                                        : ticket.cad_status === 1
-                                            ? "Uploaded"
-                                            : ticket.cad_status === 2
-                                                ? "Confirm"
-                                                : "-"}
-                                </td>
+                                <td>{cbStatusLabels[ticket.cb_status] || "-"}</td>
+                                <td>{statusLabels[ticket.status] || "-"}</td>
+                                <td>{cadStatusLabels[ticket.cad_status] || "-"}</td>
                                 <td>{ticket.destination || "-"}</td>
                                 <td>{ticket.eta ? new Date(ticket.eta).toLocaleDateString() : "-"}</td>
                                 <td>{ticket.note || "-"}</td>

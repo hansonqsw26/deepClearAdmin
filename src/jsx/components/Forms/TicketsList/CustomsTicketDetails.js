@@ -7,6 +7,22 @@ function useQuery() {
 
 const allowedExtensions = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg"];
 
+const cbStatusLabels = {
+    0: "Unknown",
+    1: "Accepted",
+    2: "Rejected",
+    4: "Released",
+    5: "Exam Required",
+    6: "Y51 Release",
+    7: "Released Instructions",
+    8: "Detain to Destination",
+    9: "Accepted/Waiting",
+    14: "Error",
+    23: "Authorized to deliver",
+    24: "Exam Required Instructions",
+    34: "Accepted/Awaiting Customs"
+};
+
 const CustomsTicketDetails = () => {
     const query = useQuery();
     const mainId = query.get("main_id");
@@ -30,7 +46,6 @@ const CustomsTicketDetails = () => {
         "commercial invoice": [],
     });
     const [filesLoading, setFilesLoading] = useState(false);
-
     const [selectedDraftFile, setSelectedDraftFile] = useState(null);
     const [selectedReleaseFile, setSelectedReleaseFile] = useState(null);
     const [uploadingDraft, setUploadingDraft] = useState(false);
@@ -54,6 +69,7 @@ const CustomsTicketDetails = () => {
                 setFormData({
                     container_number: found.container_number || "",
                     cb_status: found.cb_status ?? 0,
+                    cb_status_time: found.cb_status_time || "",
                     cad_status: found.cad_status ?? 0,
                     transaction_number: found.transaction_number || "",
                     status: found.status ?? 0,
@@ -92,7 +108,6 @@ const CustomsTicketDetails = () => {
             const data = await res.json();
             let filesArray = [];
             if (res.ok && data.files) filesArray = Array.isArray(data.files) ? data.files : [data.files];
-
             setFiles(prev => ({ ...prev, [fileType]: filesArray }));
         } catch (err) {
             console.error(err);
@@ -101,7 +116,6 @@ const CustomsTicketDetails = () => {
         setFilesLoading(false);
     };
 
-    // --- Fetch all file types when ticket is loaded ---
     useEffect(() => {
         if (ticket?.container_number) {
             [
@@ -134,7 +148,7 @@ const CustomsTicketDetails = () => {
             if (res.ok) {
                 setMessage("✅ Ticket updated successfully.");
                 setIsEditing(false);
-                ["draft cad", "release cad"].forEach(ft => fetchFiles(ft)); // only refresh editable files
+                ["draft cad", "release cad"].forEach(ft => fetchFiles(ft));
             } else {
                 setMessage(`Update failed: ${data.error || "Unknown error"}`);
             }
@@ -151,7 +165,7 @@ const CustomsTicketDetails = () => {
         const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
         if (!allowedExtensions.includes(ext)) {
             alert("Invalid file type. Only PDF, Word, Excel, PNG, JPG, JPEG are allowed.");
-            e.target.value = ""; // Reset input
+            e.target.value = "";
             return;
         }
 
@@ -223,6 +237,7 @@ const CustomsTicketDetails = () => {
                     setFormData({
                         container_number: ticket.container_number || "",
                         cb_status: ticket.cb_status ?? 0,
+                        cb_status_time: ticket.cb_status_time || "",
                         cad_status: ticket.cad_status ?? 0,
                         transaction_number: ticket.transaction_number || "",
                         status: ticket.status ?? 0,
@@ -237,12 +252,12 @@ const CustomsTicketDetails = () => {
 
             <form onSubmit={handleSubmit}>
                 <div className="row g-3">
-                    {/* --- Ticket fields --- */}
                     <div className="col-md-4">
                         <label>Container Number</label>
                         <input type="text" name="container_number" className="form-control"
                                value={formData.container_number} onChange={handleChange} readOnly={!isEditing} />
                     </div>
+
                     <div className="col-md-4">
                         <label>Customs Status</label>
                         <select name="cb_status" className="form-control" value={formData.cb_status} onChange={handleChange} disabled={!isEditing}>
@@ -252,6 +267,14 @@ const CustomsTicketDetails = () => {
                             <option value="3">Exam</option>
                         </select>
                     </div>
+
+                    <div className="col-md-4">
+                        <label>CBSA Status / Time</label>
+                        <input type="text" className="form-control"
+                               value={`${cbStatusLabels[formData.cb_status] || "Unknown"}${formData.cb_status_time ? ` | ${new Date(formData.cb_status_time).toLocaleString()}` : ""}`}
+                               readOnly />
+                    </div>
+
                     <div className="col-md-4">
                         <label>CAD Status</label>
                         <select name="cad_status" className="form-control" value={formData.cad_status} disabled>
@@ -260,10 +283,12 @@ const CustomsTicketDetails = () => {
                             <option value="2">Confirmed</option>
                         </select>
                     </div>
+
                     <div className="col-md-4">
                         <label>Transaction Number</label>
                         <input type="text" name="transaction_number" className="form-control" value={formData.transaction_number} onChange={handleChange} readOnly={!isEditing} />
                     </div>
+
                     <div className="col-md-4">
                         <label>Status</label>
                         <select name="status" className="form-control" value={formData.status} onChange={handleChange} disabled={!isEditing}>
@@ -272,14 +297,17 @@ const CustomsTicketDetails = () => {
                             <option value="2">Finished</option>
                         </select>
                     </div>
+
                     <div className="col-md-4">
                         <label>Destination</label>
                         <input type="text" name="destination" className="form-control" value={formData.destination} onChange={handleChange} readOnly={!isEditing} />
                     </div>
+
                     <div className="col-md-4">
                         <label>ETA</label>
                         <input type="datetime-local" name="eta" className="form-control" value={formData.eta} onChange={handleChange} readOnly={!isEditing} />
                     </div>
+
                     <div className="col-md-12">
                         <label>Note</label>
                         <textarea name="note" className="form-control" value={formData.note} onChange={handleChange} readOnly={!isEditing} />
@@ -304,7 +332,6 @@ const CustomsTicketDetails = () => {
                             ))}
                         </div>
                     }
-                    {/* Only Draft/Release CAD allow uploads */}
                     {(ft === "draft cad" || ft === "release cad") && (
                         <div className="input-group mb-3">
                             <input type="file" className="form-control" onChange={(e) => handleFileChange(e, ft === "draft cad" ? "draft" : "release")}

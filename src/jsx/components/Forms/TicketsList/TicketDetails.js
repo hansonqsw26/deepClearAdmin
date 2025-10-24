@@ -179,6 +179,32 @@ const TicketDetails = () => {
     };
 
 
+    // --- DELETE POD FILE ---
+    const handleDeletePod = async (file_id) => {
+        if (!window.confirm("Are you sure you want to delete this file?")) return;
+
+        try {
+            const res = await fetch("https://deepclear.ca/api/admin/deleteFile", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ file_id }),
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                alert("✅ File deleted successfully!");
+                // Refresh POD files list
+                fetchPodFiles();
+            } else {
+                alert(data.error || "Failed to delete file.");
+            }
+        } catch {
+            alert("Network error. File could not be deleted.");
+        }
+    };
+
+
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -764,23 +790,34 @@ const TicketDetails = () => {
             <h5 className="mb-3 mt-4">POD Files</h5>
 
             {/* List existing POD files */}
+            {/* List existing POD files */}
             {podFiles.length === 0 ? (
                 <p>No POD files uploaded yet.</p>
             ) : (
                 <div className="list-group mb-3">
                     {podFiles.map((file) => (
-                        <a
+                        <div
                             key={file.file_id}
-                            href={file.file_link}  // Correct API key
-                            target="_blank"
-                            rel="noreferrer"
-                            className="list-group-item list-group-item-action"
+                            className="d-flex justify-content-between align-items-center list-group-item"
                         >
-                            {file.file_name || "Unnamed file"}
-                        </a>
+                            <a
+                                href={file.file_link}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                {file.file_name || "Unnamed file"}
+                            </a>
+                            <button
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => handleDeletePod(file.file_id)}
+                            >
+                                Delete
+                            </button>
+                        </div>
                     ))}
                 </div>
             )}
+
 
             <div className="input-group mb-3">
                 <input

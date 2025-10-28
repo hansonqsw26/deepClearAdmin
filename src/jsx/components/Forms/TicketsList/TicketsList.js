@@ -14,7 +14,7 @@ const TicketsList = () => {
     const [containerNumberFilter, setContainerNumberFilter] = useState("");
     const [transactionNumberFilter, setTransactionNumberFilter] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
-
+    const [loadNumberFilter, setLoadNumberFilter] = useState("")
     const [selectedTicket, setSelectedTicket] = useState(null);
     const [refreshFlag, setRefreshFlag] = useState(false);
     const navigate = useNavigate();
@@ -50,6 +50,7 @@ const TicketsList = () => {
             if (mainIdFilter.trim()) body.main_id = mainIdFilter.trim();
             if (containerNumberFilter.trim()) body.container_number = containerNumberFilter.trim();
             if (transactionNumberFilter.trim()) body.transaction_number = transactionNumberFilter.trim();
+            if (loadNumberFilter.trim()) body.load_number = loadNumberFilter.trim();
             if (statusFilter !== "") body.status = Number(statusFilter);
 
             const res = await fetch("https://deepclear.ca/api/admin/fetchTruckTickets", {
@@ -86,7 +87,7 @@ const TicketsList = () => {
         setPage(1);
         fetchTickets();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mainIdFilter, containerNumberFilter, transactionNumberFilter, statusFilter]);
+    }, [mainIdFilter, containerNumberFilter, transactionNumberFilter, statusFilter, loadNumberFilter]);
 
     const totalPages = Math.max(1, Math.ceil(totalTickets / limit));
 
@@ -157,6 +158,16 @@ const TicketsList = () => {
                     />
                 </div>
 
+                <div className="col-md-3">
+                    <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Filter by Load Number #"
+                        value={loadNumberFilter}
+                        onChange={(e) => setLoadNumberFilter(e.target.value)}
+                    />
+                </div>
+
                 <div className="col-md-3 d-flex align-items-center">
                     <select
                         className="form-select me-3"
@@ -215,6 +226,7 @@ const TicketsList = () => {
                         <tr>
                             <th>Action</th>
                             <th>Status</th>
+                            <th>Note</th>
                             <th>Reference #</th>
                             <th>Client</th>
                             <th>Container #</th>
@@ -225,7 +237,6 @@ const TicketsList = () => {
                             <th>POE</th>
                             <th>Transaction #</th>
                             <th>Customs Brokerage</th>
-                            <th>Note</th>
                             <th>GPS</th>
                             <th>Created At</th>
                         </tr>
@@ -244,6 +255,7 @@ const TicketsList = () => {
                                     </button>
                                 </td>
                                 <td>{statusMap[ticket.status] || "-"}</td>
+                                <td>{ticket.note || "-"}</td>
                                 <td>{ticket.reference_number || "-"}</td>
                                 <td>{ticket.client_name || "-"}</td>
                                 <td>{ticket.container_number || "-"}</td>
@@ -254,7 +266,6 @@ const TicketsList = () => {
                                 <td>{ticket.poe || "-"}</td>
                                 <td>{ticket.transaction_number || "-"}</td>
                                 <td>{cbStatusMap[ticket.cb_status] ?? "-"}</td>
-                                <td>{ticket.note || "-"}</td>
                                 <td>
                                     {ticket.gps_link ? (
                                         <a

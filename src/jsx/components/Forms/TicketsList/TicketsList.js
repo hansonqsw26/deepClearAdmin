@@ -255,7 +255,9 @@ const TicketsList = () => {
                                     </button>
                                 </td>
                                 <td>{statusMap[ticket.status] || "-"}</td>
+
                                 <td>{ticket.note || "-"}</td>
+
                                 <td>{ticket.reference_number || "-"}</td>
                                 <td>{ticket.client_name || "-"}</td>
                                 <td>{ticket.container_number || "-"}</td>

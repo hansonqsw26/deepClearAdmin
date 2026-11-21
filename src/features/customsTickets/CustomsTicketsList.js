@@ -1,212 +1,139 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { apiFetch } from '../../api/http';
+/** Customs shipments list: search, stage chips, paging. Rows open the shipment page. */
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Button, Card, EmptyState, Page, Pager, Spinner, formatDate, useDebounced } from '../../ui/components';
+import { customsApi, IS_ADMIN } from './customs.api';
+import { StageBadge, CbsaBadge } from './CustomsBits';
+import { TRANSPORT_ICONS, useCustomsOptions } from './customsMeta';
 
-const cbStatusLabels = {
-    0: "Unknown",
-    1: "Accepted",
-    2: "Rejected",
-    4: "Released",
-    5: "Exam Required",
-    6: "Y51 Release",
-    7: "Released Instructions",
-    8: "Detain to Destination",
-    9: "Accepted/Waiting",
-    14: "Error",
-    23: "Authorized to deliver",
-    24: "Exam Required Instructions",
-    34: "Accepted/Awaiting Customs"
-};
+const FILTERS = [
+    { key: '', label: 'All' },
+    { key: 'open', label: 'Open', stage: 'submitted,in_review,awaiting_client,release_requested,cbsa_exam,released,accounted' },
+    { key: 'attention', label: 'Needs attention', attention: true },
+    { key: 'review', label: 'Broker review', stage: 'submitted,in_review' },
+    { key: 'cbsa', label: 'With CBSA', stage: 'release_requested,cbsa_exam' },
+    { key: 'released', label: 'Released', stage: 'released,accounted' },
+    { key: 'closed', label: 'Closed', stage: 'invoiced,completed,cancelled' },
+];
 
-const statusLabels = {
-    0: "Reviewing",
-    1: "Processing",
-    2: "Finished"
-};
-
-const cadStatusLabels = {
-    0: "Not Uploaded",
-    1: "Uploaded",
-    2: "Confirmed"
-};
-
-const CustomsTicketsList = () => {
-    const [tickets, setTickets] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [searchContainer, setSearchContainer] = useState("");
-    const [searchReference, setSearchReference] = useState("");
-    const [searchTransaction, setSearchTransaction] = useState("");
-    const [searchStatus, setSearchStatus] = useState("");
-    const [page, setPage] = useState(1);
-    const [limit] = useState(10);
-    const [total, setTotal] = useState(0);
+export default function CustomsTicketsList() {
     const navigate = useNavigate();
+    const [params, setParams] = useSearchParams();
+    const options = useCustomsOptions();
+    const [search, setSearch] = useState(params.get('q') || '');
+    const [filter, setFilter] = useState(params.get('f') || '');
+    const [page, setPage] = useState(Number(params.get('page')) || 1);
+    const [result, setResult] = useState(null);
+    const [error, setError] = useState('');
+    const q = useDebounced(search, 300);
+    const limit = 15;
 
     useEffect(() => {
-        fetchTickets();
-    }, [page, searchContainer, searchReference, searchTransaction, searchStatus]);
+        const f = FILTERS.find((x) => x.key === filter) || FILTERS[0];
+        const next = {};
+        if (q) next.q = q;
+        if (filter) next.f = filter;
+        if (page > 1) next.page = String(page);
+        setParams(next, { replace: true });
 
-    const fetchTickets = async () => {
-        setLoading(true);
-        try {
-            const res = await apiFetch("/admin/fetchCbTicket", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    container_number: searchContainer,
-                    main_id: searchReference,
-                    transaction_number: searchTransaction,
-                    status: searchStatus !== "" ? Number(searchStatus) : undefined,
-                    page,
-                    limit,
-                }),
-            });
+        let alive = true;
+        setResult(null);
+        setError('');
+        customsApi
+            .list({ page, limit, search: q || undefined, stage: f.stage, attention: f.attention })
+            .then((r) => alive && setResult(r))
+            .catch((e) => alive && setError(e.message));
+        return () => {
+            alive = false;
+        };
+    }, [q, filter, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
-            const data = await res.json();
-            if (res.ok) {
-                setTickets(data.data || []);
-                setTotal(data.total || 0);
-            } else {
-                console.error("Error fetching customs tickets:", data.error);
-            }
-        } catch (err) {
-            console.error("Error fetching customs tickets:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const totalPages = Math.ceil(total / limit);
+    const open = (row) => navigate(`/customs-ticket-details?main_id=${row.main_id}`);
+    const stageLabel = (row) => row.stage_label || (options && (options.stages.find((s) => s.key === row.stage) || {}).label);
 
     return (
-        <div className="container mt-4">
-            <h3>Customs Brokerage Tickets</h3>
-
-            {/* Filters */}
-            <div className="row mb-3">
-                <div className="col">
-                    <input
-                        type="text"
-                        placeholder="Search by Container #"
-                        className="form-control"
-                        value={searchContainer}
-                        onChange={(e) => setSearchContainer(e.target.value)}
-                    />
+        <Page
+            title={IS_ADMIN ? 'Customs files' : 'My customs shipments'}
+            subtitle={IS_ADMIN ? 'Every customs brokerage file, newest first.' : 'Track each shipment from documents to CBSA release.'}
+            actions={<Button icon="fa-solid fa-plus" onClick={() => navigate('/create-customs-ticket')}>{IS_ADMIN ? 'New customs file' : 'New shipment'}</Button>}
+        >
+            <Card tight>
+                <div className="dc-toolbar">
+                    <div className="dc-search">
+                        <i className="fa-solid fa-magnifying-glass" />
+                        <input
+                            className="dc-input"
+                            placeholder={`Search reference, container, B/L, cargo control no.${IS_ADMIN ? ', client' : ''}`}
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                        />
+                    </div>
                 </div>
-                <div className="col">
-                    <input
-                        type="text"
-                        placeholder="Search by Reference #"
-                        className="form-control"
-                        value={searchReference}
-                        onChange={(e) => setSearchReference(e.target.value)}
-                    />
+                <div className="dc-chips">
+                    {FILTERS.map((f) => (
+                        <button key={f.key} type="button" className={`dc-chip ${filter === f.key ? 'active' : ''}`} onClick={() => { setFilter(f.key); setPage(1); }}>
+                            {f.attention && <i className="fa-solid fa-triangle-exclamation" />}
+                            {f.label}
+                        </button>
+                    ))}
                 </div>
-                <div className="col">
-                    <input
-                        type="text"
-                        placeholder="Search by Transaction #"
-                        className="form-control"
-                        value={searchTransaction}
-                        onChange={(e) => setSearchTransaction(e.target.value)}
-                    />
+                <div style={{ marginTop: 12 }}>
+                    {error && <div className="dc-alert dc-tone-red" style={{ margin: 16 }}>{error}</div>}
+                    {!result && !error && <Spinner />}
+                    {result && result.data.length === 0 && (
+                        <EmptyState
+                            icon="fa-solid fa-ship"
+                            title={q || filter ? 'No shipments match' : 'No customs shipments yet'}
+                            action={!q && !filter && <Button icon="fa-solid fa-plus" onClick={() => navigate('/create-customs-ticket')}>{IS_ADMIN ? 'New customs file' : 'Submit your first shipment'}</Button>}
+                        >
+                            {q || filter ? 'Try another search or filter.' : 'Submit your shipment details and documents and we will take it from there.'}
+                        </EmptyState>
+                    )}
+                    {result && result.data.length > 0 && (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="dc-table">
+                                <thead>
+                                    <tr>
+                                        <th>Reference</th>
+                                        {IS_ADMIN && <th>Client</th>}
+                                        <th>Containers</th>
+                                        <th>B/L · Cargo control</th>
+                                        <th>ETA</th>
+                                        <th>Stage</th>
+                                        <th>CBSA</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {result.data.map((row) => (
+                                        <tr key={row.main_id} className="clickable" onClick={() => open(row)}>
+                                            <td className="dc-td-head" data-label="Reference">
+                                                <div className="dc-strong">
+                                                    {row.transport_mode && <i className={`${TRANSPORT_ICONS[row.transport_mode]} dc-muted`} style={{ marginRight: 8 }} />}
+                                                    {row.reference_number}
+                                                </div>
+                                                <div className="dc-small dc-muted">{formatDate(row.create_date)}</div>
+                                            </td>
+                                            {IS_ADMIN && <td data-label="Client">{row.client_name}</td>}
+                                            <td data-label="Containers">
+                                                <span className="dc-mono">{row.container_number || '—'}</span>
+                                                {row.container_count > 1 && <span className="dc-small dc-muted"> +{row.container_count - 1} more</span>}
+                                            </td>
+                                            <td data-label="B/L · CCN">
+                                                <div className="dc-mono">{row.bill_of_lading || '—'}</div>
+                                                {row.cargo_control_number && <div className="dc-small dc-muted dc-mono">{row.cargo_control_number}</div>}
+                                            </td>
+                                            <td data-label="ETA">{formatDate(row.eta)}</td>
+                                            <td data-label="Stage"><StageBadge stage={row.stage} label={stageLabel(row)} /></td>
+                                            <td data-label="CBSA"><CbsaBadge code={row.cb_status} label={row.cb_status_label} /></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
-                <div className="col">
-                    <select
-                        className="form-select"
-                        value={searchStatus}
-                        onChange={(e) => setSearchStatus(e.target.value)}
-                    >
-                        <option value="">All Statuses</option>
-                        {Object.entries(statusLabels).map(([key, label]) => (
-                            <option key={key} value={key}>{label}</option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            {/* Table */}
-            {loading ? (
-                <p>Loading tickets...</p>
-            ) : (
-                <div className="table-responsive shadow-sm rounded" style={{ maxHeight: "60vh", overflowY: "auto" }}>
-                    <table className="table table-bordered table-hover">
-                        <thead className="table-dark sticky-top">
-                        <tr>
-                            <th>Action</th>
-                            <th>Client</th>
-                            <th>Reference #</th>
-                            <th>Container #</th>
-                            <th>Transaction #</th>
-                            <th>Customs Status</th>
-                            <th>Status</th>
-                            <th>CAD Status</th>
-                            <th>Destination</th>
-                            <th>ETA</th>
-                            <th>Note</th>
-                            <th>Created At</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        {tickets.map((ticket, i) => (
-                            <tr key={i}>
-                                <td>
-                                    <button
-                                        className="btn btn-sm btn-info"
-                                        onClick={() =>
-                                            navigate(`/customs-ticket-details?main_id=${ticket.main_id}&cb_id=${ticket.cb_id}`)
-                                        }
-                                    >
-                                        View Details
-                                    </button>
-                                </td>
-                                <td>{ticket.client_name || "-"}</td>
-                                <td>{ticket.reference_number || "-"}</td>
-                                <td>{ticket.container_number || "-"}</td>
-                                <td>{ticket.transaction_number || "-"}</td>
-                                <td>{cbStatusLabels[ticket.cb_status] || "-"}</td>
-                                <td>{statusLabels[ticket.status] || "-"}</td>
-                                <td>{cadStatusLabels[ticket.cad_status] || "-"}</td>
-                                <td>{ticket.destination || "-"}</td>
-                                <td>{ticket.eta ? new Date(ticket.eta).toLocaleDateString() : "-"}</td>
-                                <td>{ticket.note || "-"}</td>
-                                <td>
-                                    {ticket.create_date
-                                        ? new Date(ticket.create_date).toLocaleString("en-CA", {
-                                            timeZone: "America/Toronto",
-                                            hour12: false,
-                                        })
-                                        : "-"}
-                                </td>
-                            </tr>
-                        ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-
-            {/* Pagination */}
-            <div className="d-flex justify-content-between mt-3">
-                <button
-                    className="btn btn-secondary"
-                    disabled={page === 1}
-                    onClick={() => setPage((prev) => prev - 1)}
-                >
-                    Previous
-                </button>
-                <span>
-                    Page {page} of {totalPages || 1}
-                </span>
-                <button
-                    className="btn btn-secondary"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((prev) => prev + 1)}
-                >
-                    Next
-                </button>
-            </div>
-        </div>
+                {result && result.total > 0 && <Pager page={page} limit={limit} total={result.total} onPage={setPage} />}
+            </Card>
+        </Page>
     );
-};
-
-export default CustomsTicketsList;
+}

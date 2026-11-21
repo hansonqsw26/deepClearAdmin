@@ -9,3 +9,6 @@ export const API_BASE_URL = trimSlash(process.env.REACT_APP_API_BASE_URL || 'htt
 
 /** localStorage key that holds the logged-in user (and their token). */
 export const SESSION_STORAGE_KEY = 'adminUser';
+
+/** Which portal this build is: decides the /admin or /client API prefix. */
+export const APP_ROLE = 'admin';

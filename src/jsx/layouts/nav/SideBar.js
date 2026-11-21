@@ -5,7 +5,7 @@ import PerfectScrollbar from "react-perfect-scrollbar";
 import { Link } from "react-router-dom";
 import { Collapse, Dropdown } from "react-bootstrap";
 import { useScrollPosition } from "@n8tb1t/use-scroll-position";
-import { MenuList as originalMenuList } from "./Menu";
+import { MenuList as originalMenuList, menuForDepartment } from "./Menu";
 import { ThemeContext } from "../../../context/ThemeContext";
 import LogoutPage from "./Logout";
 /// Image
@@ -53,37 +53,13 @@ const SideBar = () => {
 
     if (storedUserData) {
       setUserData({
-        name: storedUserData.email || "William",
-        email: storedUserData.email || "william@gmail.com",
+        name: storedUserData.email || "",
+        email: storedUserData.email || "",
         profilePic: storedUserData.profilePic || profile,
         department: storedUserData.department || null,
       });
 
-      if (storedUserData.department === 2) {
-        // Filter menu for department 2:
-        // 1) Remove "Quote" section
-        // 2) Remove "Create Account" section
-        // 3) Inside "Ticket" section, remove "Create Truck Ticket"
-        const filteredMenu = originalMenuList
-            .filter(
-                (menu) =>
-                    menu.title !== "Quote" && menu.title !== "Create Account"
-            )
-            .map((menu) => {
-              if (menu.title === "Ticket") {
-                // Filter "Create Truck Ticket" from Ticket content
-                const filteredContent = menu.content.filter(
-                    (item) => item.title !== "Create Truck Ticket"
-                );
-                return { ...menu, content: filteredContent };
-              }
-              return menu;
-            });
-
-        setMenuList(filteredMenu);
-      } else {
-        setMenuList(originalMenuList);
-      }
+      setMenuList(menuForDepartment(storedUserData.department));
     } else {
       // If no user data, just use original menu list
       setMenuList(originalMenuList);
@@ -157,7 +133,7 @@ const SideBar = () => {
                   role="button"
                   data-toggle="dropdown"
               >
-                <img src={userData.profilePic} width={20} alt="profile" />
+                <span className="dc-avatar" aria-hidden="true">{(userData.name || "?").slice(0, 2).toUpperCase()}</span>
                 <div className="header-info ms-3">
                 <span className="font-w600 ">
                   Hi,<b>{userData.name}</b>

@@ -4,6 +4,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { checkAutoLogin } from './services/AuthService';
 import { isAuthenticated } from './store/selectors/AuthSelectors';
 
@@ -11,7 +12,7 @@ import './vendor/swiper/css/swiper-bundle.min.css';
 import './vendor/bootstrap-select/dist/css/bootstrap-select.min.css';
 import './css/style.css';
 
-const Login = lazy(() => import('./jsx/pages/Login'));
+const Login = lazy(() => import('./features/auth/Login'));
 const Index = lazy(() => import('./jsx/index'));
 
 const Preloader = () => (
@@ -28,6 +29,7 @@ function App() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const loggedIn = useSelector(isAuthenticated);
+    useTranslation(); // re-render every page when the language changes
 
     useEffect(() => {
         checkAutoLogin(dispatch, navigate);

@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from 'react';
 import { customsApi } from './customs.api';
+import { stageName, t } from '../../i18n';
 
 export const STAGE_TONE = {
     submitted: 'blue',
@@ -44,9 +45,19 @@ export function cbsaTone(code) {
     return 'gray';
 }
 
-export const CAD_STATUS = { 0: 'Not uploaded', 1: 'Draft ready', 2: 'Approved by client' };
+/* Getters, so the labels follow the current language wherever they are read. */
+export const CAD_STATUS = {
+    get 0() { return t('cad.0'); },
+    get 1() { return t('cad.1'); },
+    get 2() { return t('cad.2'); },
+};
 
-export const TRANSPORT_LABELS = { marine: 'Ocean', air: 'Air', rail: 'Rail', highway: 'Truck' };
+export const TRANSPORT_LABELS = {
+    get marine() { return t('transport.marine'); },
+    get air() { return t('transport.air'); },
+    get rail() { return t('transport.rail'); },
+    get highway() { return t('transport.highway'); },
+};
 export const TRANSPORT_ICONS = { marine: 'fa-solid fa-ship', air: 'fa-solid fa-plane', rail: 'fa-solid fa-train', highway: 'fa-solid fa-truck' };
 
 /** Common origin countries first, then the rest is free text (2-letter code). */
@@ -59,7 +70,7 @@ export const COUNTRIES = [
     ['AE', 'United Arab Emirates'], ['SA', 'Saudi Arabia'], ['IL', 'Israel'], ['EG', 'Egypt'], ['ZA', 'South Africa'],
     ['PH', 'Philippines'], ['SG', 'Singapore'], ['HK', 'Hong Kong'], ['KH', 'Cambodia'], ['LK', 'Sri Lanka'],
 ];
-export const countryName = (code) => (COUNTRIES.find(([c]) => c === code) || [code, code])[1];
+export const countryName = (code) => t(`country.${code}`, { defaultValue: (COUNTRIES.find(([c]) => c === code) || [code, code])[1] });
 
 export const CURRENCIES = ['USD', 'CAD', 'EUR', 'CNY', 'GBP', 'JPY', 'MXN', 'INR', 'KRW', 'VND', 'AUD', 'HKD'];
 
@@ -67,8 +78,8 @@ export const CURRENCIES = ['USD', 'CAD', 'EUR', 'CNY', 'GBP', 'JPY', 'MXN', 'INR
 export function checkContainer(raw) {
     const v = String(raw || '').toUpperCase().replace(/[\s-]/g, '');
     if (!v) return {};
-    if (!/^[A-Z]{4}\d{7}$/.test(v)) return { error: '4 letters and 7 digits, e.g. MSCU1234566.' };
-    if (!/^[A-Z]{3}[UJZ]/.test(v)) return { warning: 'The 4th letter is usually U.' };
+    if (!/^[A-Z]{4}\d{7}$/.test(v)) return { error: t('container.format') };
+    if (!/^[A-Z]{3}[UJZ]/.test(v)) return { warning: t('container.fourth') };
     const letter = (ch) => {
         let n = 10;
         for (let c = 65; c < ch.charCodeAt(0); c += 1) {
@@ -79,7 +90,7 @@ export function checkContainer(raw) {
     };
     let sum = 0;
     for (let i = 0; i < 10; i += 1) sum += (i < 4 ? letter(v[i]) : Number(v[i])) * (2 ** i);
-    return (sum % 11) % 10 === Number(v[10]) ? {} : { warning: 'Check digit does not match. Please double-check.' };
+    return (sum % 11) % 10 === Number(v[10]) ? {} : { warning: t('container.checkDigit') };
 }
 
 let optionsPromise = null;
@@ -102,5 +113,5 @@ export function useCustomsOptions() {
 
 export const stageLabel = (options, key) => {
     const s = options && options.stages.find((x) => x.key === key);
-    return s ? s.label : key;
+    return stageName(key, s && s.label);
 };

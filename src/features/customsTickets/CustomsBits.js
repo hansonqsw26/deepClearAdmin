@@ -1,15 +1,20 @@
 /** Small customs-specific pieces: stage/CBSA badges and the progress stepper. */
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from '../../ui/components';
+import { cbsaName, stageDesc, stageName } from '../../i18n';
 import { STAGE_TONE, STAGE_ICON, cbsaTone } from './customsMeta';
 
+/** `label` is the API's English name, used only when the stage key is unknown. */
 export function StageBadge({ stage, label }) {
-    return <Badge tone={STAGE_TONE[stage] || 'gray'}>{label || stage}</Badge>;
+    useTranslation();
+    return <Badge tone={STAGE_TONE[stage] || 'gray'}>{stageName(stage, label)}</Badge>;
 }
 
 export function CbsaBadge({ code, label }) {
-    if (code === null || code === undefined || Number(code) === 0) return <Badge tone="gray" plain>Not reported yet</Badge>;
-    return <Badge tone={cbsaTone(code)} title={`CBSA code ${code}`}>{label || `Code ${code}`}</Badge>;
+    const { t } = useTranslation();
+    if (code === null || code === undefined || Number(code) === 0) return <Badge tone="gray" plain>{t('cbsa.notReported')}</Badge>;
+    return <Badge tone={cbsaTone(code)} title={t('cbsa.codeTitle', { code })}>{cbsaName(code, label)}</Badge>;
 }
 
 /**
@@ -17,23 +22,25 @@ export function CbsaBadge({ code, label }) {
  * as a warning on the step they detour from; cancelled shows on its own.
  */
 export function StageStepper({ stage, stages, mainPath }) {
+    const { t } = useTranslation();
     if (!stages) return null;
     const byKey = Object.fromEntries(stages.map((s) => [s.key, s]));
     const anchor = { awaiting_client: 'in_review', cbsa_exam: 'release_requested' }[stage] || stage;
     const currentIndex = mainPath.indexOf(anchor);
     const side = stage === 'awaiting_client' || stage === 'cbsa_exam';
     const current = byKey[stage] || {};
+    const label = (key) => stageName(key, (byKey[key] || {}).label);
 
     return (
         <div>
-            <div className="dc-stepper" aria-label="Shipment progress">
+            <div className="dc-stepper" aria-label={t('progress')}>
                 {mainPath.map((key, i) => {
                     const done = currentIndex > i || (stage === 'completed' && key === 'completed');
                     const isCurrent = i === currentIndex && stage !== 'completed';
                     return (
                         <div key={key} className={`dc-step ${done ? 'done' : ''} ${isCurrent ? 'current' : ''} ${isCurrent && side ? 'warn' : ''}`}>
                             <div className="dc-step-dot">{done ? <i className="fa-solid fa-check" /> : i + 1}</div>
-                            <div className="dc-step-label">{isCurrent && side ? current.label : byKey[key].label}</div>
+                            <div className="dc-step-label">{isCurrent && side ? label(stage) : label(key)}</div>
                         </div>
                     );
                 })}
@@ -41,8 +48,8 @@ export function StageStepper({ stage, stages, mainPath }) {
             <div className={`dc-callout dc-tone-${STAGE_TONE[stage] || 'gray'}`}>
                 <i className={STAGE_ICON[stage] || 'fa-solid fa-circle-info'} />
                 <div>
-                    <b>{current.label}</b>
-                    {current.description}
+                    <b>{label(stage)}</b>
+                    {stageDesc(stage, current.description)}
                 </div>
             </div>
         </div>

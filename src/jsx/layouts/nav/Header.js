@@ -8,8 +8,10 @@ import PerfectScrollbar from "react-perfect-scrollbar";
 import avatar from "../../../images/avatar/1.jpg";
 import { Dropdown } from "react-bootstrap";
 import { ThemeContext } from "../../../context/ThemeContext";
+import { useTranslation } from "react-i18next";
+import LanguageSwitch from "../../../i18n/LanguageSwitch";
 
-/** Header title per page (the section the page belongs to). */
+/** Header title per page (the section the page belongs to); translated through the i18n "menu" keys. */
 const PAGE_TITLES = {
   "": "Dashboard",
   "dashboard": "Dashboard",
@@ -27,6 +29,7 @@ const PAGE_TITLES = {
 };
 
 const Header = ({ onNote }) => {
+  const { t } = useTranslation();
   var path = window.location.pathname.split("/");
   var name = path[path.length - 1].split("-");
   var filterName = name.length >= 3 ? name.filter((n, i) => i > 0) : name;
@@ -73,16 +76,22 @@ const Header = ({ onNote }) => {
                   className="dashboard_bar"
                   style={{ textTransform: "capitalize" }}
               >
-                {PAGE_TITLES[window.location.pathname.split("/").pop()] ||
-                  (finalName.join(" ").length === 0 ? "Dashboard" : finalName.join(" "))}
+                {(() => {
+                  const title = PAGE_TITLES[window.location.pathname.split("/").pop()];
+                  if (title) return t(`menu.${title}`, { defaultValue: title });
+                  return finalName.join(" ").length === 0 ? t("menu.Dashboard") : finalName.join(" ");
+                })()}
               </div>
             </div>
             <ul className="navbar-nav header-right main-notification">
                 <li className="nav-item">
                   <div className="input-group search-area">
-                    <input type="text" className="form-control" placeholder="Search here..." />
+                    <input type="text" className="form-control" placeholder={t("nav.search")} />
                     <span className="input-group-text"><Link to={"#"}><i className="flaticon-381-search-2"></i></Link></span>
                   </div>
+                </li>
+                <li className="nav-item dc-lang-item">
+                    <LanguageSwitch />
                 </li>
                 <li className="nav-item dropdown notification_dropdown">
                     <Link to={"#"} className={`nav-link bell dz-theme-mode p-0 ${background.value === "dark" ? 'active' : ''}`} 

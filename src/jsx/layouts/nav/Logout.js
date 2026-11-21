@@ -2,6 +2,7 @@ import React  from 'react';
 import {connect, useDispatch } from 'react-redux';
 import {  useLocation, useNavigate, useParams } from 'react-router-dom';
 
+import { useTranslation } from 'react-i18next';
 import { Logout } from '../../../store/actions/AuthActions';
 import { isAuthenticated } from '../../../store/selectors/AuthSelectors';
 
@@ -22,6 +23,7 @@ function withRouter(Component) {
 }
 
 function LogoutPage(props){
+    const { t } = useTranslation();
     const dispatch = useDispatch();
     const navigate = useNavigate();
     function onLogout() {
@@ -40,7 +42,7 @@ function LogoutPage(props){
                     <polyline points="16 17 21 12 16 7" />
                     <line x1={21} y1={12} x2={9} y2={12} />
                 </svg>
-                <span className="ms-2" >Logout </span>
+                <span className="ms-2" >{t('nav.logout')} </span>
             </button>
         </>
     )

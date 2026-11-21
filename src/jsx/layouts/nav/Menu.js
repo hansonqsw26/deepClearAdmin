@@ -9,6 +9,11 @@ export const MenuList = [
         iconStyle: <i className="fa-solid fa-gauge-high" />,
     },
     {
+        title: 'Ticket summary',
+        to: 'ticket-summary',
+        iconStyle: <i className="fa-solid fa-chart-column" />,
+    },
+    {
         title: 'Customs',
         classsChange: 'mm-collapse',
         iconStyle: <i className="fa-solid fa-ship" />,

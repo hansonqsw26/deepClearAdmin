@@ -34,10 +34,12 @@ const TicketDetails = lazy(() => import("../features/truckTickets/TicketDetails"
 const CreateCustomsTicket = lazy(() => import("../features/customsTickets/CreateCustomsTicket"));
 const CustomsTicketsList = lazy(() => import("../features/customsTickets/CustomsTicketsList"));
 const CustomsTicketDetails = lazy(() => import("../features/customsTickets/CustomsTicketDetails"));
+const TicketSummary = lazy(() => import("../features/analytics/TicketSummary"));
 
 export const appRoutes = [
   { url: "", component: <Dashboard /> },
   { url: "dashboard", component: <Dashboard /> },
+  { url: "ticket-summary", component: <TicketSummary /> },
 
   // Quotes
   { url: "quote-list", component: <QuoteList /> },

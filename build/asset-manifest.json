@@ -1,10 +1,10 @@
 {
   "files": {
     "main.css": "/static/css/main.4219529f.css",
-    "main.js": "/static/js/main.7fa57a78.js",
+    "main.js": "/static/js/main.c2edbf8c.js",
     "static/js/782.98f33cb4.chunk.js": "/static/js/782.98f33cb4.chunk.js",
     "static/css/626.d38bf41e.chunk.css": "/static/css/626.d38bf41e.chunk.css",
-    "static/js/626.13cf2a24.chunk.js": "/static/js/626.13cf2a24.chunk.js",
+    "static/js/626.93e8a4b1.chunk.js": "/static/js/626.93e8a4b1.chunk.js",
     "static/js/27.ceda1b5b.chunk.js": "/static/js/27.ceda1b5b.chunk.js",
     "static/css/664.5e8a54cf.chunk.css": "/static/css/664.5e8a54cf.chunk.css",
     "static/js/664.1d216c7b.chunk.js": "/static/js/664.1d216c7b.chunk.js",
@@ -17,6 +17,8 @@
     "static/js/772.88a7cf97.chunk.js": "/static/js/772.88a7cf97.chunk.js",
     "static/js/601.1f9644a3.chunk.js": "/static/js/601.1f9644a3.chunk.js",
     "static/js/384.d1d45e04.chunk.js": "/static/js/384.d1d45e04.chunk.js",
+    "static/css/127.76bb3d18.chunk.css": "/static/css/127.76bb3d18.chunk.css",
+    "static/js/127.0c0ee869.chunk.js": "/static/js/127.0c0ee869.chunk.js",
     "static/js/419.634541e9.chunk.js": "/static/js/419.634541e9.chunk.js",
     "static/js/364.89d5e662.chunk.js": "/static/js/364.89d5e662.chunk.js",
     "static/media/materialdesignicons-webfont.svg?v=2.4.85": "/static/media/materialdesignicons-webfont.d4de1856365c39f68b72.svg",
@@ -89,6 +91,6 @@
   },
   "entrypoints": [
     "static/css/main.4219529f.css",
-    "static/js/main.7fa57a78.js"
+    "static/js/main.c2edbf8c.js"
   ]
 }

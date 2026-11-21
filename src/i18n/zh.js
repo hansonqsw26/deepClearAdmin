@@ -320,6 +320,7 @@ const zh = {
         transactionNumber: '交易号',
         transactionHint: '14 位数字，系统据此跟踪 CBSA 状态。',
         transactionHintAdmin: '来自 Candata 的 14 位数字。',
+        transactionHintAll: 'Candata 中的 14 位交易号，适用于全部集装箱。分批申报的，可稍后在货运页面分别录入。',
         notes: '备注',
     },
 
@@ -395,6 +396,14 @@ const zh = {
         confirmRemove: '确定从此货运中移除 {{what}}？',
         thisUnit: '此单元',
         removed: '已移除。',
+        entryButton: '录入交易号',
+        entryTitle: '海关申报（交易号）',
+        entryHelp: '在此输入 Candata 中的交易号（只需输入一次），并勾选该申报涵盖的集装箱，通常是全部集装箱。分批申报时，每个交易号分别保存一次。保存后会立即查询 CBSA 状态。',
+        entryCovers: '该申报涵盖的集装箱',
+        entrySave_other: '为 {{count}} 个集装箱保存',
+        entrySaved: '已保存海关申报，正在查询 CBSA 状态。',
+        noTxnAll: '尚未填写交易号，因此不会查询 CBSA 状态。在 Candata 完成申报后，请点击“录入交易号”。',
+        noTxnSome_other: '{{total}} 个集装箱中有 {{count}} 个没有交易号，不会查询其 CBSA 状态，此货运也无法显示为已放行。',
         documents: '单证',
         docsReceived: '必需单证已收到 {{received}} / {{required}}',
         filesUploaded: '已上传 {{count}} 个文件。',
@@ -436,6 +445,10 @@ const zh = {
         docUploaded: '已上传单证「{{doc}}」：{{name}}',
         cbsaStatus: 'CBSA 状态：{{status}}{{which}}',
         autoStage: '根据 CBSA 状态“{{status}}”自动更新。',
+        entrySet: '已录入交易号 {{txn}}{{which}}。',
+        entryRemoved: '已移除交易号{{which}}。',
+        entryFor: '（{{list}}）',
+        entryFrom: '（{{list}}）',
     },
 
     summary: {

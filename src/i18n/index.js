@@ -94,6 +94,8 @@ const EVENT_PATTERNS = [
     [/^Container ?(\S*) removed\.$/, (m) => t('event.containerRemoved', { n: m[1] })],
     [/^CBSA status: (.+?)( \([A-Z0-9, ]+\))?$/, (m) => t('event.cbsaStatus', { status: cbsaFromLabel(m[1]), which: m[2] || '' })],
     [/^Updated automatically from CBSA status "(.+)"\.$/, (m) => t('event.autoStage', { status: cbsaFromLabel(m[1]) })],
+    [/^Customs entry (\d{14}) set(?: for (.+))?\.$/, (m) => t('event.entrySet', { txn: m[1], which: m[2] ? t('event.entryFor', { list: m[2] }) : '' })],
+    [/^Customs entry removed(?: from (.+))?\.$/, (m) => t('event.entryRemoved', { which: m[1] ? t('event.entryFrom', { list: m[1] }) : '' })],
     [/^(.+?) uploaded: (.+)$/s, (m) => (docKey(m[1]) ? t('event.docUploaded', { doc: docName(m[1]), name: m[2] }) : null)],
 ];
 export function eventText(message) {

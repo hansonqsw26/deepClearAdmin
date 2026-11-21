@@ -11,7 +11,7 @@ import { Button, Card, DropZone, Field, Page, useToast } from '../../ui/componen
 import { customsApi, IS_ADMIN } from './customs.api';
 import { COUNTRIES, CURRENCIES, TRANSPORT_ICONS, TRANSPORT_LABELS, checkContainer, countryName, useCustomsOptions } from './customsMeta';
 
-const EMPTY_CONTAINER = { container_number: '', size_type: '40HC', seal_number: '', transaction_number: '' };
+const EMPTY_CONTAINER = { container_number: '', size_type: '40HC', seal_number: '' };
 const ISO_MODES = ['marine', 'rail'];
 
 const INITIAL = {
@@ -31,6 +31,7 @@ export default function CreateCustomsTicket() {
     const [shipment, setShipment] = useState(INITIAL);
     const [eta, setEta] = useState('');
     const [destination, setDestination] = useState('');
+    const [txn, setTxn] = useState(''); // admin: one customs entry for every container
     const [note, setNote] = useState('');
     const [containers, setContainers] = useState([{ ...EMPTY_CONTAINER }]);
     const [files, setFiles] = useState({}); // file_type -> File[]
@@ -77,8 +78,8 @@ export default function CreateCustomsTicket() {
             }
             if (n && seen.has(n)) e[`containers.${i}.container_number`] = t('create.err.twice');
             if (n) seen.add(n);
-            if (c.transaction_number && !/^\d{14}$/.test(c.transaction_number.replace(/\s/g, ''))) e[`containers.${i}.transaction_number`] = t('create.err.txn');
         });
+        if (IS_ADMIN && txn && !/^\d{14}$/.test(txn.replace(/\s/g, ''))) e.transaction_number = t('create.err.txn');
         setErrors(e);
         return e;
     }
@@ -104,7 +105,7 @@ export default function CreateCustomsTicket() {
                     seal_number: c.seal_number,
                     eta: eta ? eta.replace('T', ' ') : undefined,
                     destination: destination || undefined,
-                    ...(IS_ADMIN && c.transaction_number ? { transaction_number: c.transaction_number } : {}),
+                    ...(IS_ADMIN && txn ? { transaction_number: txn } : {}),
                 })),
             };
             if (IS_ADMIN) body.client_id = Number(clientId);
@@ -212,6 +213,12 @@ export default function CreateCustomsTicket() {
 
                         <Card title={iso ? t('create.containers') : t('create.units')} sub={iso ? t('create.containersSub') : t('create.unitsSub')}
                             actions={<Button variant="secondary" size="sm" icon="fa-solid fa-plus" onClick={() => setContainers((l) => [...l, { ...EMPTY_CONTAINER }])}>{iso ? t('create.addContainer') : t('create.addUnit')}</Button>}>
+                            {IS_ADMIN && (
+                                <div className="dc-grid dc-grid-3" style={{ marginBottom: 12 }}>
+                                    <Field label={t('field.transactionNumber')} name="transaction_number" value={txn} inputMode="numeric"
+                                        onChange={(e) => setTxn(e.target.value)} error={err('transaction_number')} hint={t('field.transactionHintAll')} />
+                                </div>
+                            )}
                             {containers.map((c, i) => {
                                 const check = iso ? checkContainer(c.container_number) : {};
                                 return (
@@ -222,7 +229,7 @@ export default function CreateCustomsTicket() {
                                                 <Button variant="ghost" size="sm" icon="fa-regular fa-trash-can" onClick={() => setContainers((l) => l.filter((_, j) => j !== i))}>{t('common.remove')}</Button>
                                             )}
                                         </div>
-                                        <div className={`dc-grid ${IS_ADMIN ? 'dc-grid-4' : 'dc-grid-3'}`}>
+                                        <div className="dc-grid dc-grid-3">
                                             <Field label={iso ? t('field.containerNumber') : t('field.uld')} required={iso} upper name={`container_${i}`}
                                                 value={c.container_number} onChange={(e) => setContainer(i, 'container_number', e.target.value)}
                                                 error={err(`containers.${i}.container_number`)} warning={check.warning} placeholder={iso ? 'MSCU1234566' : ''} />
@@ -231,11 +238,6 @@ export default function CreateCustomsTicket() {
                                                     options={((options && options.container_sizes) || ['20GP', '40GP', '40HC']).map((s) => ({ value: s, label: s }))} />
                                             )}
                                             <Field label={t('field.seal')} name={`seal_${i}`} value={c.seal_number} onChange={(e) => setContainer(i, 'seal_number', e.target.value)} />
-                                            {IS_ADMIN && (
-                                                <Field label={t('field.transactionNumber')} name={`txn_${i}`} value={c.transaction_number} inputMode="numeric"
-                                                    onChange={(e) => setContainer(i, 'transaction_number', e.target.value)} error={err(`containers.${i}.transaction_number`)}
-                                                    hint={t('field.transactionHint')} />
-                                            )}
                                         </div>
                                     </div>
                                 );

@@ -6,6 +6,7 @@ import {Provider} from 'react-redux';
 import {store} from './store/store';
 import reportWebVitals from "./reportWebVitals";
 import  ThemeContext  from "./context/ThemeContext";
+import { ToastProvider } from "./ui/components";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -13,7 +14,9 @@ root.render(
         <Provider store = {store}>
             <BrowserRouter basename='/'>
                 <ThemeContext>
-                    <App />
+                    <ToastProvider>
+                        <App />
+                    </ToastProvider>
                 </ThemeContext>
             </BrowserRouter>
         </Provider>

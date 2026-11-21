@@ -226,8 +226,10 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
     const [form, setForm] = useState({});
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
+    const [entry, setEntry] = useState(null); // { txn, ids: Set } while the customs-entry panel is open
 
     const startEdit = (c) => {
+        setEntry(null);
         setForm(c ? {
             container_number: c.container_number || '', size_type: c.size_type || '', seal_number: c.seal_number || '',
             transaction_number: c.transaction_number || '', destination: c.destination || '', eta: toLocalInput(c.eta),
@@ -269,13 +271,85 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
     const canChange = IS_ADMIN || canEdit;
     const check = iso ? checkContainer(form.container_number) : {};
 
+    /* Customs entry (admin): one Candata transaction number for the containers it covers. */
+    const openEntry = () => {
+        const missing = containers.filter((c) => !c.transaction_number);
+        // Start with the containers that still need a number, or all of them when none do.
+        const ids = new Set((missing.length ? missing : containers).map((c) => c.container_id));
+        setEditing(null);
+        setErrors({});
+        setEntry({ txn: '', ids });
+    };
+    const toggleEntryId = (id) => setEntry((e) => {
+        const ids = new Set(e.ids);
+        if (ids.has(id)) ids.delete(id); else ids.add(id);
+        return { ...e, ids };
+    });
+    const saveEntry = async () => {
+        setSaving(true);
+        try {
+            await customsApi.setEntry(ticket.main_id, entry.txn, [...entry.ids]);
+            toast.success(t('details.entrySaved'));
+            setEntry(null);
+            onSaved();
+        } catch (e) {
+            setErrors(e.fields || {});
+            toast.error(e.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+    const missingTxn = containers.filter((c) => !c.transaction_number).length;
+    const closed = ['invoiced', 'completed', 'cancelled'].includes(ticket.stage);
+    const showMissing = IS_ADMIN && missingTxn > 0 && !closed && ticket.stage !== 'submitted';
+
     return (
         <Card
             title={iso ? t('details.containers', { count: containers.length }) : t('details.units', { count: containers.length })}
             sub={t('details.containersSub')}
             tight
-            actions={canChange && editing === null && <Button variant="secondary" size="sm" icon="fa-solid fa-plus" onClick={() => startEdit(null)}>{t('common.add')}</Button>}
+            actions={canChange && editing === null && entry === null && (
+                <>
+                    {IS_ADMIN && containers.length > 0 && <Button variant="secondary" size="sm" icon="fa-solid fa-file-signature" onClick={openEntry}>{t('details.entryButton')}</Button>}
+                    <Button variant="secondary" size="sm" icon="fa-solid fa-plus" onClick={() => startEdit(null)}>{t('common.add')}</Button>
+                </>
+            )}
         >
+            {showMissing && entry === null && (
+                <div className="dc-alert dc-tone-amber" style={{ margin: '0 16px 12px' }}>
+                    <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: 8 }} />
+                    {missingTxn === containers.length
+                        ? t('details.noTxnAll')
+                        : t('details.noTxnSome', { count: missingTxn, total: containers.length })}
+                </div>
+            )}
+            {entry !== null && (
+                <div style={{ padding: 16, borderBottom: '1px solid var(--dc-line)' }}>
+                    <div className="dc-section-title">{t('details.entryTitle')}</div>
+                    <p className="dc-small dc-muted" style={{ marginTop: 0 }}>{t('details.entryHelp')}</p>
+                    <div className="dc-grid dc-grid-3">
+                        <Field label={t('field.transactionNumber')} name="entry_txn" value={entry.txn} inputMode="numeric" autoFocus
+                            error={errors.transaction_number} hint={t('field.transactionHintAdmin')}
+                            onChange={(e) => setEntry((x) => ({ ...x, txn: e.target.value }))} />
+                    </div>
+                    <div className="dc-small dc-strong" style={{ margin: '10px 0 6px' }}>{t('details.entryCovers')}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 18px' }}>
+                        {containers.map((c) => (
+                            <label key={c.container_id} className="dc-small" style={{ display: 'flex', gap: 6, alignItems: 'center', margin: 0 }}>
+                                <input type="checkbox" checked={entry.ids.has(c.container_id)} onChange={() => toggleEntryId(c.container_id)} />
+                                <span className="dc-mono">{c.container_number || t('details.thisUnit')}</span>
+                                {c.transaction_number && <span className="dc-muted dc-mono">({c.transaction_number})</span>}
+                            </label>
+                        ))}
+                    </div>
+                    <div className="dc-actions end" style={{ marginTop: 14 }}>
+                        <Button variant="ghost" onClick={() => setEntry(null)}>{t('common.cancel')}</Button>
+                        <Button busy={saving} disabled={!entry.txn.trim() || entry.ids.size === 0} icon="fa-solid fa-check" onClick={saveEntry}>
+                            {t('details.entrySave', { count: entry.ids.size })}
+                        </Button>
+                    </div>
+                </div>
+            )}
             {containers.length === 0 && <EmptyState icon="fa-solid fa-box" title={t('details.noContainers')} />}
             {containers.length > 0 && (
                 <div style={{ overflowX: 'auto' }}>

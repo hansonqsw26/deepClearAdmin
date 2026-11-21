@@ -36,6 +36,7 @@
 .dc-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--dc-line); }
 .dc-card-head h3 { font-size: 16px; font-weight: 600; margin: 0; color: var(--dc-ink); }
 .dc-card-head .dc-sub { color: var(--dc-muted); font-size: 13px; }
+@media (min-width: 640px) { .dc-card-head > .dc-actions { flex-shrink: 0; } }
 .dc-card-body { padding: 20px; }
 .dc-card-body.tight { padding: 0; }
 

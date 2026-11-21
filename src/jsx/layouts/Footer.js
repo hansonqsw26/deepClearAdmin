@@ -1,12 +1,14 @@
  import React from "react";
+import { useTranslation } from "react-i18next";
 
 const Footer = () => {
+  const { t } = useTranslation();
   var d = new Date();
   return (
     <div className="footer">
       <div className="copyright">
         <p>
-          Copyright © Designed &amp; Developed by{" "}
+          {t("nav.footer")}{" "}
           <a target="_blank" rel="noreferrer">
             DeepClear
           </a>{" "}

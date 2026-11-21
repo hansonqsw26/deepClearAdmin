@@ -53,7 +53,8 @@
 .dl-hero-foot { font-size: 12px; color: rgba(255, 255, 255, .55); }
 
 /* right: form */
-.dl-main { display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+.dl-main { position: relative; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+.dl-lang { position: absolute; top: 24px; right: 24px; }
 .dl-card { width: 100%; max-width: 420px; }
 .dl-logo { height: 56px; width: auto; display: block; margin: 0 0 28px -6px; }
 .dl-title h2 { font-size: 28px; font-weight: 650; letter-spacing: -.02em; margin: 0 0 6px; color: var(--dl-ink); }
@@ -102,7 +103,8 @@
   .dl-hero-copy h1 { font-size: 22px; margin-bottom: 6px; }
   .dl-hero-copy p { font-size: 14px; margin: 0; }
   .dl-points, .dl-demo, .dl-hero-foot { display: none; }
-  .dl-main { align-items: flex-start; padding: 28px 20px 40px; }
+  .dl-main { align-items: flex-start; padding: 72px 20px 40px; }
+  .dl-lang { top: 18px; right: 20px; }
   .dl-logo { display: none; }
   .dl-title h2 { font-size: 24px; }
 }

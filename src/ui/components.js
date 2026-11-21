@@ -3,6 +3,8 @@
  * Small, dependency-free building blocks styled by ./dc-ui.css.
  */
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { locale, t as tr } from '../i18n';
 import './dc-ui.css';
 
 export function Page({ title, subtitle, back, actions, children }) {
@@ -123,17 +125,18 @@ export function StatTile({ icon, tone = 'teal', value, label, onClick }) {
 }
 
 export function Pager({ page, limit, total, onPage }) {
+    const { t } = useTranslation();
     const pages = Math.max(1, Math.ceil(total / limit));
     const from = total ? (page - 1) * limit + 1 : 0;
     const to = Math.min(total, page * limit);
     return (
         <div className="dc-pager">
-            <span>{total ? `${from}–${to} of ${total}` : 'No results'}</span>
+            <span>{total ? t('ui.pagerRange', { from, to, total }) : t('ui.pagerNone')}</span>
             <div className="dc-actions">
-                <Button variant="secondary" size="sm" icon="fa-solid fa-chevron-left" disabled={page <= 1} onClick={() => onPage(page - 1)}>Previous</Button>
-                <span>Page {page} of {pages}</span>
+                <Button variant="secondary" size="sm" icon="fa-solid fa-chevron-left" disabled={page <= 1} onClick={() => onPage(page - 1)}>{t('ui.previous')}</Button>
+                <span>{t('ui.pagerPage', { page, pages })}</span>
                 <Button variant="secondary" size="sm" disabled={page >= pages} onClick={() => onPage(page + 1)}>
-                    Next <i className="fa-solid fa-chevron-right" />
+                    {t('ui.next')} <i className="fa-solid fa-chevron-right" />
                 </Button>
             </div>
         </div>
@@ -144,7 +147,9 @@ export const ACCEPTED_FILES = '.pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg';
 const MAX_BYTES = 25 * 1024 * 1024;
 
 /** Click or drag files here. Calls onFiles(File[]) with files that pass the type/size check. */
-export function DropZone({ onFiles, multiple = true, compact, label = 'Drop files here or click to browse', disabled }) {
+export function DropZone({ onFiles, multiple = true, compact, label: labelProp, disabled }) {
+    const { t } = useTranslation();
+    const label = labelProp || t('ui.dropLabel');
     const inputRef = useRef(null);
     const [over, setOver] = useState(false);
     const toast = useToast();
@@ -153,8 +158,8 @@ export function DropZone({ onFiles, multiple = true, compact, label = 'Drop file
         const ok = [];
         for (const f of Array.from(list || [])) {
             const ext = f.name.split('.').pop().toLowerCase();
-            if (!ACCEPTED_FILES.split(',').includes(`.${ext}`)) toast.error(`${f.name}: only PDF, Word, Excel, PNG or JPG files.`);
-            else if (f.size > MAX_BYTES) toast.error(`${f.name} is larger than 25 MB.`);
+            if (!ACCEPTED_FILES.split(',').includes(`.${ext}`)) toast.error(t('ui.dropBadType', { name: f.name }));
+            else if (f.size > MAX_BYTES) toast.error(t('ui.dropTooBig', { name: f.name }));
             else ok.push(f);
         }
         if (ok.length) onFiles(multiple ? ok : ok.slice(0, 1));
@@ -182,7 +187,7 @@ export function DropZone({ onFiles, multiple = true, compact, label = 'Drop file
         >
             <i className="fa-solid fa-cloud-arrow-up" />
             {label}
-            <small>PDF, Word, Excel, PNG or JPG · up to 25 MB each</small>
+            <small>{t('ui.dropTypes')}</small>
             <input ref={inputRef} type="file" hidden multiple={multiple} accept={ACCEPTED_FILES}
                 onChange={(e) => { accept(e.target.files); e.target.value = ''; }} />
         </div>
@@ -252,7 +257,7 @@ export function formatDate(value, withTime = false) {
     if (Number.isNaN(d.getTime())) return String(value);
     const opts = { year: 'numeric', month: 'short', day: 'numeric' };
     if (withTime) Object.assign(opts, { hour: 'numeric', minute: '2-digit' });
-    return d.toLocaleString(undefined, opts);
+    return d.toLocaleString(locale(), opts);
 }
 
 export function timeAgo(value) {
@@ -260,10 +265,10 @@ export function timeAgo(value) {
     const d = new Date(String(value).replace(' ', 'T'));
     const s = Math.round((Date.now() - d.getTime()) / 1000);
     if (Number.isNaN(s)) return '';
-    if (s < 60) return 'just now';
-    if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-    if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
-    if (s < 86400 * 7) return `${Math.floor(s / 86400)} d ago`;
+    if (s < 60) return tr('time.justNow');
+    if (s < 3600) return tr('time.minAgo', { n: Math.floor(s / 60) });
+    if (s < 86400) return tr('time.hAgo', { n: Math.floor(s / 3600) });
+    if (s < 86400 * 7) return tr('time.dAgo', { n: Math.floor(s / 86400) });
     return formatDate(value);
 }
 

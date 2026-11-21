@@ -7,6 +7,7 @@ import { Collapse, Dropdown } from "react-bootstrap";
 import { useScrollPosition } from "@n8tb1t/use-scroll-position";
 import { MenuList as originalMenuList, menuForDepartment } from "./Menu";
 import { ThemeContext } from "../../../context/ThemeContext";
+import { useTranslation } from "react-i18next";
 import LogoutPage from "./Logout";
 /// Image
 import profile from "../../../images/profile/pic1.jpg";
@@ -22,6 +23,8 @@ const initialState = {
 };
 
 const SideBar = () => {
+  const { t } = useTranslation();
+  const tm = (title) => t(`menu.${title}`, { defaultValue: title });
   const {
     iconHover,
     sidebarposition,
@@ -136,7 +139,7 @@ const SideBar = () => {
                 <span className="dc-avatar" aria-hidden="true">{(userData.name || "?").slice(0, 2).toUpperCase()}</span>
                 <div className="header-info ms-3">
                 <span className="font-w600 ">
-                  Hi,<b>{userData.name}</b>
+                  {t("nav.hi")}<b>{userData.name}</b>
                 </span>
                 </div>
               </Dropdown.Toggle>
@@ -153,7 +156,7 @@ const SideBar = () => {
               if (menuClass === "menu-title") {
                 return (
                     <li className={menuClass} key={index}>
-                      {data.title}
+                      {tm(data.title)}
                     </li>
                 );
               } else {
@@ -172,7 +175,7 @@ const SideBar = () => {
                                 }}
                             >
                               {data.iconStyle}
-                              <span className="nav-text">{data.title}</span>
+                              <span className="nav-text">{tm(data.title)}</span>
                               <span className="badge badge-xs style-1 badge-danger ms-2">
                           {data.update}
                         </span>
@@ -200,7 +203,7 @@ const SideBar = () => {
                                                     handleSubmenuActive(subItem.title);
                                                   }}
                                               >
-                                                {subItem.title}
+                                                {tm(subItem.title)}
                                               </Link>
                                               <Collapse
                                                   in={state.activeSubmenu === subItem.title ? true : false}
@@ -218,7 +221,7 @@ const SideBar = () => {
                                                             }`}
                                                             to={childItem.to}
                                                         >
-                                                          {childItem.title}
+                                                          {tm(childItem.title)}
                                                         </Link>
                                                       </li>
                                                   ))}
@@ -226,7 +229,7 @@ const SideBar = () => {
                                               </Collapse>
                                             </>
                                         ) : (
-                                            <Link to={subItem.to}>{subItem.title}</Link>
+                                            <Link to={subItem.to}>{tm(subItem.title)}</Link>
                                         )}
                                       </li>
                                   );
@@ -237,7 +240,7 @@ const SideBar = () => {
                       ) : (
                           <Link to={data.to}>
                             {data.iconStyle}
-                            <span className="nav-text">{data.title}</span>
+                            <span className="nav-text">{tm(data.title)}</span>
                           </Link>
                       )}
                     </li>
@@ -247,10 +250,10 @@ const SideBar = () => {
           </ul>
           <div className="copyright">
             <p>
-              <strong>DeepClear Inc</strong> © 2025 All Rights Reserved
+              <strong>DeepClear Inc</strong> © 2025 {t("nav.rights")}
             </p>
             <p className="fs-12">
-              Made with <span className="heart" onClick={heartBlast}></span> by Deep Clear
+              {t("nav.madeWith")} <span className="heart" onClick={heartBlast}></span> {t("nav.by")}
             </p>
           </div>
         </PerfectScrollbar>

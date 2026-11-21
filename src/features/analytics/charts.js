@@ -3,6 +3,8 @@
  * Colours come from the dc-ui.css tokens so both portals match.
  */
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { isZh, t } from '../../i18n';
 
 export const TONE_VAR = {
     teal: 'var(--dc-primary)',
@@ -28,12 +30,17 @@ function niceScale(max, ticks = 4) {
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-/** "2026-11-16" -> "Nov 16", "2026-11" -> "Nov 2026". */
+/** "2026-11-16" -> "Nov 16" / "11月16日", "2026-11" -> "Nov '26" / "2026年11月". */
 export function bucketLabel(key, bucket, long = false) {
     const [y, m, d] = key.split('-').map(Number);
+    if (isZh()) {
+        if (bucket === 'month') return long ? `${y}年${m}月` : `${String(y).slice(2)}年${m}月`;
+        const label = `${m}月${d}日`;
+        return bucket === 'week' && long ? t('summary.chart.weekOf', { date: label }) : label;
+    }
     if (bucket === 'month') return `${MONTHS[m - 1]}${long ? ` ${y}` : ` '${String(y).slice(2)}`}`;
     const label = `${MONTHS[m - 1]} ${d}`;
-    return bucket === 'week' && long ? `Week of ${label}` : label;
+    return bucket === 'week' && long ? t('summary.chart.weekOf', { date: label }) : label;
 }
 
 /**
@@ -41,6 +48,7 @@ export function bucketLabel(key, bucket, long = false) {
  * data: [{ key, created, released, containers }]
  */
 export function TrendChart({ data, bucket, height = 240, noun = 'Files' }) {
+    const { t: tr } = useTranslation();
     const [hover, setHover] = useState(null);
     const W = 720;
     const H = height;
@@ -67,11 +75,11 @@ export function TrendChart({ data, bucket, height = 240, noun = 'Files' }) {
     return (
         <div className="dc-chart">
             <div className="dc-legend">
-                <span><i style={{ background: TONE_VAR.teal }} /> {noun} created</span>
-                <span><i className="line" style={{ background: TONE_VAR.violet }} /> Released by CBSA</span>
+                <span><i style={{ background: TONE_VAR.teal }} /> {tr('summary.chart.created', { noun })}</span>
+                <span><i className="line" style={{ background: TONE_VAR.violet }} /> {tr('summary.chart.released')}</span>
             </div>
             <div className="dc-chart-box">
-                <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Files created and released over time"
+                <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={tr('summary.chart.aria')}
                     onMouseMove={onMove} onMouseLeave={() => setHover(null)} style={{ height: H }}>
                     {scale.values.map((v) => (
                         <g key={v}>
@@ -95,8 +103,8 @@ export function TrendChart({ data, bucket, height = 240, noun = 'Files' }) {
                 {h && (
                     <div className="dc-tooltip" style={{ left: `${(x(hover) / W) * 100}%` }}>
                         <b>{bucketLabel(h.key, bucket, true)}</b>
-                        <div><i style={{ background: TONE_VAR.teal }} /> {h.created} created · {h.containers} containers</div>
-                        <div><i style={{ background: TONE_VAR.violet }} /> {h.released} released</div>
+                        <div><i style={{ background: TONE_VAR.teal }} /> {tr('summary.chart.tipCreated', { created: h.created, containers: h.containers })}</div>
+                        <div><i style={{ background: TONE_VAR.violet }} /> {tr('summary.chart.tipReleased', { released: h.released })}</div>
                     </div>
                 )}
             </div>
@@ -130,9 +138,9 @@ export function StackedBar({ items, onSelect }) {
 }
 
 /** Label, bar and number per row. items: [{ key, label, count, tone?, hint? }] */
-export function BarList({ items, empty = 'No data yet.', tone = 'teal', onSelect }) {
+export function BarList({ items, empty, tone = 'teal', onSelect }) {
     const max = Math.max(1, ...items.map((i) => i.count));
-    if (!items.length || !items.some((i) => i.count)) return <div className="dc-muted dc-small" style={{ padding: '6px 0' }}>{empty}</div>;
+    if (!items.length || !items.some((i) => i.count)) return <div className="dc-muted dc-small" style={{ padding: '6px 0' }}>{empty || t('summary.noData')}</div>;
     return (
         <ul className="dc-barlist">
             {items.map((i) => (

@@ -11,7 +11,7 @@ import './vendor/swiper/css/swiper-bundle.min.css';
 import './vendor/bootstrap-select/dist/css/bootstrap-select.min.css';
 import './css/style.css';
 
-const Login = lazy(() => import('./jsx/pages/Login'));
+const Login = lazy(() => import('./features/auth/Login'));
 const Index = lazy(() => import('./jsx/index'));
 
 const Preloader = () => (

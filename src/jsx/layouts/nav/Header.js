@@ -9,6 +9,22 @@ import avatar from "../../../images/avatar/1.jpg";
 import { Dropdown } from "react-bootstrap";
 import { ThemeContext } from "../../../context/ThemeContext";
 
+/** Header title per page (the section the page belongs to). */
+const PAGE_TITLES = {
+  "": "Dashboard",
+  "dashboard": "Dashboard",
+  "customs-tickets-list": "Customs",
+  "create-customs-ticket": "Customs",
+  "customs-ticket-details": "Customs",
+  "tickets-list": "Trucking",
+  "create-truck-ticket": "Trucking",
+  "ticket-details": "Trucking",
+  "quote-list": "Quotes",
+  "create-quote": "Quotes",
+  "create-client-account": "Accounts",
+  "create-admin-account": "Accounts",
+};
+
 const Header = ({ onNote }) => {
   var path = window.location.pathname.split("/");
   var name = path[path.length - 1].split("-");
@@ -56,11 +72,8 @@ const Header = ({ onNote }) => {
                   className="dashboard_bar"
                   style={{ textTransform: "capitalize" }}
               >
-                {finalName.join(" ").length === 0
-                  ? "Dashboard"
-                  : finalName.join(" ") === "dashboard dark"
-                  ? "Dashboard"
-                  : finalName.join(" ")}
+                {PAGE_TITLES[window.location.pathname.split("/").pop()] ||
+                  (finalName.join(" ").length === 0 ? "Dashboard" : finalName.join(" "))}
               </div>
             </div>
             <ul className="navbar-nav header-right main-notification">

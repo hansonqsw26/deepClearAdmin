@@ -25,16 +25,17 @@ Restart `npm start` after changing env files.
 src/
 ├── index.js                 # mounts <App/> with Redux store, router, theme
 ├── App.js                   # login page when logged out, the app when logged in
-├── config/env.js            # API_BASE_URL (from REACT_APP_API_BASE_URL) + session storage key
+├── config/env.js            # API_BASE_URL (from REACT_APP_API_BASE_URL), session storage key, APP_ROLE
+├── ui/                      # shared UI kit (components.js + dc-ui.css): cards, fields, badges, drop zone, toasts
 ├── api/
 │   ├── http.js              # apiFetch() and axios `api`: base URL + "Authorization: Bearer <token>"
 │   └── session.js           # read / save / clear the logged-in user in localStorage
 │   ├── features/            # one folder per business area (start here)
-│   │   ├── dashboard/       # landing page: quote summary cards
+│   │   ├── dashboard/       # landing page with live numbers (POST /dashboard)
 │   │   ├── quotes/          # QuoteList, CreateQuote, quotes.api.js
 │   │   ├── accounts/        # create admin / client logins
 │   │   ├── truckTickets/    # CreateTruckTicket, TicketsList, TicketDetails
-│   │   └── customsTickets/  # CreateCustomsTicket, CustomsTicketsList, CustomsTicketDetails
+│   │   └── customsTickets/  # customs files: list, create, details (stage control, containers, documents, timeline)
 ├── jsx/
 │   ├── index.js             # list of pages (routes) inside the main layout
 │   ├── layouts/             # sidebar (nav/Menu.js = menu entries), header, footer
@@ -50,12 +51,12 @@ src/
 
 | URL | What it does |
 | --- | --- |
-| `/dashboard` | quote counts |
+| `/dashboard` | workload: open files, needing attention, with CBSA, pipeline by stage, latest updates |
 | `/quote-list` | all quotes; set price and admin note |
 | `/create-quote` | create a quote for a chosen client |
 | `/create-admin-account`, `/create-client-account` | new logins |
 | `/create-truck-ticket`, `/tickets-list`, `/ticket-details` | truck tickets |
-| `/create-customs-ticket`, `/customs-tickets-list`, `/customs-ticket-details` | customs brokerage tickets |
+| `/create-customs-ticket`, `/customs-tickets-list`, `/customs-ticket-details` | customs files: open a file for a client, move it through the brokerage stages, upload the draft CAD, message the client (or leave internal notes) |
 
 ## How API calls work
 
@@ -85,7 +86,16 @@ Login: `POST /api/admin/login` returns a JWT that is saved in localStorage under
 3. Add a menu entry in `src/jsx/layouts/nav/Menu.js`.
 4. Put its API calls in a small `<area>.api.js` next to it, using `apiFetch`.
 
+## Shared code with the other portal
+
+`src/ui/` and `src/features/customsTickets/` (plus `features/dashboard/Dashboard.js`) are **identical in the
+admin and client portals**; `APP_ROLE` in `config/env.js` switches between `/admin/*` and `/client/*` API calls
+and the admin-only controls. Change them in one portal and copy the files to the other.
+
 ## Styles
+
+New pages use the DeepClear UI kit in `src/ui/dc-ui.css` (classes prefixed `dc-`, mobile-first,
+tables turn into cards under 760px).
 
 `src/css/style.css` is the compiled theme and is what the app loads. The SCSS
 sources in `src/scss` come from the template; `npm run sass:build` regenerates

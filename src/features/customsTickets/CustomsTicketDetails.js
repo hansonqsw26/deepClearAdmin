@@ -5,13 +5,17 @@
  * any time, and approve the draft entry (CAD).
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { docHint, docName, eventText, locale, stageName } from '../../i18n';
 import { Badge, Button, Card, DropZone, EmptyState, Field, Page, Spinner, display, formatDate, timeAgo, useToast } from '../../ui/components';
 import { customsApi, IS_ADMIN } from './customs.api';
 import { CbsaBadge, StageBadge, StageStepper } from './CustomsBits';
+import { PoaBadge, PoaUpload, canManageAccounts, poaNeedsAction } from './Importers';
 import { CAD_STATUS, COUNTRIES, CURRENCIES, STAGE_TONE, TRANSPORT_ICONS, TRANSPORT_LABELS, checkContainer, countryName, useCustomsOptions } from './customsMeta';
+
+/** Stages after which a missing POA no longer blocks anything. */
+const DONE_STAGES = ['released', 'accounted', 'invoiced', 'completed', 'cancelled'];
 
 /** [field, label key (field.*), options] */
 const SHIPMENT_FIELDS = [
@@ -46,6 +50,9 @@ const EVENT_STYLE = {
     update: { icon: 'fa-solid fa-pen', tone: 'gray' },
 };
 
+/** Broker-side wording for documents whose usual hint speaks to the client. */
+const ADMIN_HINT = { 'release cad': 'details.releaseCadAdminHint', 'brokerage invoice': 'details.invoiceHint', 'draft cad': '' };
+
 const toLocalInput = (v) => (v ? String(v).replace(' ', 'T').slice(0, 16) : '');
 
 export default function CustomsTicketDetails() {
@@ -79,6 +86,13 @@ export default function CustomsTicketDetails() {
 
     const { ticket, shipment, containers, documents, timeline } = data;
     const mode = shipment.transport_mode;
+    /** Scroll to a card (and put the cursor in the message box when asked). */
+    const jump = (id, focus) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (focus) setTimeout(() => { const box = el.querySelector('textarea'); if (box) box.focus({ preventScroll: true }); }, 400);
+    };
 
     return (
         <Page
@@ -91,24 +105,61 @@ export default function CustomsTicketDetails() {
             subtitle={
                 <>
                     {mode && <><i className={TRANSPORT_ICONS[mode]} /> {TRANSPORT_LABELS[mode]} · </>}
-                    {IS_ADMIN && <>{ticket.client_name} · </>}
+                    {IS_ADMIN && <>{ticket.company_name ? `${ticket.company_name} (${ticket.client_name})` : ticket.client_name} · </>}
                     {t('details.opened', { date: formatDate(ticket.create_date) })}
                 </>
             }
             back={back}
         >
             <Card>
-                <StageStepper stage={ticket.stage} stages={options.stages} mainPath={options.main_path} />
+                <StageStepper stage={ticket.stage} stages={options.stages} mainPath={options.main_path}>
+                    {!IS_ADMIN && ticket.stage === 'awaiting_client' && (
+                        <>
+                            {ticket.action_request && (
+                                <div className="dc-request">
+                                    <div className="dc-small dc-strong">{t('details.requestFrom')}</div>
+                                    <div style={{ whiteSpace: 'pre-wrap' }}>{ticket.action_request.message}</div>
+                                </div>
+                            )}
+                            <div className="dc-actions" style={{ marginTop: 10 }}>
+                                <Button size="sm" icon="fa-solid fa-arrow-up-from-bracket" onClick={() => jump('dc-documents')}>{t('details.uploadDocs')}</Button>
+                                <Button size="sm" variant="secondary" icon="fa-regular fa-comment" onClick={() => jump('dc-timeline', true)}>{t('details.reply')}</Button>
+                            </div>
+                        </>
+                    )}
+                </StageStepper>
+                {IS_ADMIN && ticket.client_replied && (
+                    <div className="dc-alert dc-tone-violet" style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <i className="fa-regular fa-comment-dots" />
+                        <span style={{ flex: '1 1 220px' }}><b>{t('details.clientReplied')}.</b> {t('details.clientRepliedText')}</span>
+                        <Button size="sm" variant="secondary" onClick={() => jump('dc-timeline')}>{t('details.seeTimeline')}</Button>
+                    </div>
+                )}
+                {data.importer && poaNeedsAction(data.importer.poa_state) && !DONE_STAGES.includes(ticket.stage) && (
+                    <div className={`dc-alert ${IS_ADMIN ? 'dc-tone-red' : 'dc-tone-amber'}`} style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }} data-testid="poa-alert">
+                        <i className="fa-solid fa-file-signature" />
+                        <span style={{ flex: '1 1 220px' }}>
+                            <b>{t('details.poaTitle', { name: data.importer.legal_name })}</b> <PoaBadge importer={data.importer} />{' '}
+                            {IS_ADMIN ? t(`details.poaStaff.${data.importer.poa_state}`) : t(`details.poaClient.${data.importer.poa_state}`)}
+                        </span>
+                        {IS_ADMIN && <PoaUpload importer={data.importer} onDone={load} />}
+                        {(!IS_ADMIN || canManageAccounts()) && (
+                            <Link className="dc-btn dc-btn-secondary dc-btn-sm" to={IS_ADMIN ? `/client-accounts?client=${ticket.client_id}` : '/importers'}>
+                                {IS_ADMIN ? t('details.poaOpenClient') : t('details.poaUpload')}
+                            </Link>
+                        )}
+                    </div>
+                )}
             </Card>
 
-            <div className="dc-layout-main">
+            <div className="dc-layout-main dc-actions-first">
                 <div>
                     <ShipmentCard shipment={shipment} ticket={ticket} canEdit={data.can_edit} options={options} onSaved={load} />
                     <ContainersCard containers={containers} ticket={ticket} mode={mode} canEdit={data.can_edit} options={options} onSaved={load} />
                     <DocumentsCard documents={documents} ticket={ticket} containers={containers} onSaved={load} />
                 </div>
                 <div>
-                    {IS_ADMIN && <StageCard ticket={ticket} options={options} onSaved={load} />}
+                    {IS_ADMIN && <StageCard ticket={ticket} options={options} documents={documents} onSaved={load} />}
                     <CadCard ticket={ticket} containers={containers} documents={documents} onSaved={load} toast={toast} />
                     <TimelineCard timeline={timeline} ticket={ticket} onSaved={load} />
                 </div>
@@ -372,7 +423,7 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
                                         {c.size_type && <span className="dc-small dc-muted"> · {c.size_type}</span>}
                                     </td>
                                     <td data-label={t('field.sealShort')}>{display(c.seal_number)}</td>
-                                    <td data-label={t('field.etaShort')}>{formatDate(c.eta, true)}</td>
+                                    <td data-label={t('field.etaShort')} style={{ whiteSpace: 'nowrap' }}>{formatDate(c.eta, true)}</td>
                                     {IS_ADMIN && <td data-label={t('details.colTxn')} className="dc-mono">{display(c.transaction_number)}</td>}
                                     <td data-label={t('details.colCbsa')}>
                                         <CbsaBadge code={c.cb_status} label={c.cb_status_label} />
@@ -456,6 +507,7 @@ function DocumentsCard({ documents, ticket, onSaved }) {
 
     return (
         <Card
+            id="dc-documents"
             title={t('details.documents')}
             sub={t('details.docsReceived', { received, required: required.length })}
             tight
@@ -474,7 +526,7 @@ function DocumentsCard({ documents, ticket, onSaved }) {
                                 {d.requirement === 'required' && !d.received && <Badge tone="amber" plain>{t('common.required')}</Badge>}
                                 {d.requirement === 'recommended' && !d.received && <Badge tone="gray" plain>{t('common.recommended')}</Badge>}
                             </div>
-                            {d.hint && <div className="dc-doc-hint">{docHint(d.key, d.hint)}</div>}
+                            {d.hint && <div className="dc-doc-hint">{IS_ADMIN && ADMIN_HINT[d.key] ? t(ADMIN_HINT[d.key]) : docHint(d.key, d.hint)}</div>}
                             {d.files.length > 0 && (
                                 <div className="dc-doc-files">
                                     {d.files.map((f) => (
@@ -490,7 +542,7 @@ function DocumentsCard({ documents, ticket, onSaved }) {
                         </div>
                         <div className="dc-doc-side">
                             {busyType === d.key ? <span className="dc-spinner" /> : (
-                                (d.key !== 'draft cad' || IS_ADMIN) && (
+                                (IS_ADMIN || d.requirement !== 'broker' || d.key === 'release cad') && (
                                     <DropZone compact label={d.received ? t('common.add') : t('common.upload')} onFiles={(files) => upload(d.key, files)} />
                                 )
                             )}
@@ -548,7 +600,7 @@ function CadCard({ ticket, containers, documents, onSaved, toast }) {
 
 /* ------------------------------------------------------------- stage (admin) */
 
-function StageCard({ ticket, options, onSaved }) {
+function StageCard({ ticket, options, documents, onSaved }) {
     const { t } = useTranslation();
     const toast = useToast();
     const [stage, setStage] = useState(ticket.stage);
@@ -571,7 +623,14 @@ function StageCard({ ticket, options, onSaved }) {
     };
 
     const path = options.main_path;
-    const next = path[path.indexOf({ awaiting_client: 'in_review', cbsa_exam: 'release_requested' }[ticket.stage] || ticket.stage) + 1];
+    // From "action needed" the next step is back to the review; an exam continues to release.
+    const next = ticket.stage === 'awaiting_client' ? 'in_review' : path[path.indexOf(ticket.stage === 'cbsa_exam' ? 'release_requested' : ticket.stage) + 1];
+    // Documents the client could still send, offered when asking the client for something.
+    const askable = documents.filter((d) => d.requirement !== 'broker' && !d.received);
+    const ask = (d) => {
+        const name = docName(d.key);
+        setMessage((m) => (m.includes(name) ? m : (m ? `${m.trim()} ` : '') + t('details.askForMessage', { list: name })));
+    };
     const nextLabel = next && stageName(next, options.stages.find((s) => s.key === next).label);
 
     return (
@@ -584,6 +643,16 @@ function StageCard({ ticket, options, onSaved }) {
             <div className="dc-grid" style={{ gap: 12 }}>
                 <Field label={t('details.orSet')} name="stage" as="select" value={stage} onChange={(e) => setStage(e.target.value)}
                     options={options.stages.map((s) => ({ value: s.key, label: stageName(s.key, s.label) }))} />
+                {stage === 'awaiting_client' && askable.length > 0 && (
+                    <div>
+                        <div className="dc-small dc-muted" style={{ marginBottom: 6 }}>{t('details.askFor')}</div>
+                        <div className="dc-chips" style={{ padding: 0 }}>
+                            {askable.map((d) => (
+                                <button key={d.key} type="button" className="dc-chip" onClick={() => ask(d)}>{docName(d.key)}</button>
+                            ))}
+                        </div>
+                    </div>
+                )}
                 <Field label={t('details.messageToClient')} name="stage_message" as="textarea" rows={2} value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder={stage === 'awaiting_client' ? t('details.messageAwaiting') : t('details.messageShown')} />
@@ -603,6 +672,9 @@ function TimelineCard({ timeline, ticket, onSaved }) {
     const [busy, setBusy] = useState(false);
     const endRef = useRef(null);
     const items = useMemo(() => [...timeline].reverse(), [timeline]);
+    const [all, setAll] = useState(false);
+    const SHOWN = 6;
+    const shown = all ? items : items.slice(0, SHOWN);
 
     const send = async () => {
         if (!text.trim()) return;
@@ -620,7 +692,7 @@ function TimelineCard({ timeline, ticket, onSaved }) {
     };
 
     return (
-        <Card title={t('details.timeline')} tight>
+        <Card id="dc-timeline" title={t('details.timeline')} tight>
             <div className="dc-composer" style={{ borderTop: 0, borderBottom: '1px solid var(--dc-line)' }}>
                 <textarea
                     className="dc-input"
@@ -642,7 +714,7 @@ function TimelineCard({ timeline, ticket, onSaved }) {
             <div style={{ padding: '18px 20px 4px' }}>
                 {items.length === 0 && <div className="dc-muted">{t('common.nothingYet')}</div>}
                 <ul className="dc-timeline">
-                    {items.map((e) => {
+                    {shown.map((e) => {
                         const style = e.event_type === 'stage' ? { icon: '', tone: STAGE_TONE[e.stage] || 'teal' } : EVENT_STYLE[e.event_type] || EVENT_STYLE.update;
                         const who = e.actor_role === 'system' ? t('details.whoSystem') : e.actor_role === 'admin' ? (IS_ADMIN ? e.actor_name || 'DeepClear' : 'DeepClear') : e.actor_name || t('details.whoClient');
                         return (
@@ -660,6 +732,11 @@ function TimelineCard({ timeline, ticket, onSaved }) {
                         );
                     })}
                 </ul>
+                {items.length > SHOWN && (
+                    <button type="button" className="dc-link" style={{ margin: '0 0 14px 22px' }} onClick={() => setAll((v) => !v)}>
+                        {all ? t('details.showLess') : t('details.showAll', { count: items.length })}
+                    </button>
+                )}
                 <div ref={endRef} />
             </div>
         </Card>

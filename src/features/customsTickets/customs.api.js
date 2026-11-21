@@ -60,3 +60,20 @@ export const customsApi = {
 
     deleteFile: (fileId) => call('/deleteFile', { file_id: fileId }),
 };
+
+/** Importer profiles and their POA (one or more per client). */
+export const importersApi = {
+    list: (clientId) => call('/listImporters', IS_ADMIN ? { client_id: clientId } : {}),
+    save: (body) => call('/saveImporter', body),
+    remove: (importerId) => call('/removeImporter', { importer_id: importerId }),
+    async uploadPoa(importerId, file, extra = {}) {
+        const form = new FormData();
+        form.append('importer_id', String(importerId));
+        for (const [k, v] of Object.entries(extra)) if (v) form.append(k, v);
+        form.append('file', file);
+        const res = await apiFetch(`/${APP_ROLE}/uploadImporterPoa`, { method: 'POST', body: form });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+        return data;
+    },
+};

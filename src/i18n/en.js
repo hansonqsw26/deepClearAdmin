@@ -70,7 +70,7 @@ const en = {
 
     nav: {
         search: 'Search here...',
-        hi: 'Hi,',
+        hi: 'Hi, ',
         logout: 'Logout',
         rights: 'All Rights Reserved',
         madeWith: 'Made with',
@@ -80,6 +80,7 @@ const en = {
 
     /** Sidebar entries and header titles, keyed by their English text. */
     menu: {
+        'Importers & POA': 'Importers & POA',
         Dashboard: 'Dashboard',
         'Ticket summary': 'Ticket summary',
         Customs: 'Customs',
@@ -148,10 +149,14 @@ const en = {
         secure: 'Encrypted connection. Never share your password.',
     },
 
+    stageAdmin: {
+        submitted: 'New file from the client. Check the documents and start the review.',
+        awaiting_client: 'Waiting for the client. The file shows "Client replied" when they answer.',
+    },
     stage: {
         submitted: { label: 'Documents submitted', desc: 'We received your shipment details and documents.' },
         in_review: { label: 'Broker review', desc: 'Our brokers are checking the commercial invoice, packing list and B/L, and classifying the goods.' },
-        awaiting_client: { label: 'Action needed', desc: 'We need something from you before we can request release. See the timeline.' },
+        awaiting_client: { label: 'Action needed', desc: 'We need something from you before we can request release.' },
         release_requested: { label: 'Release requested (PARS/RMD)', desc: 'Release request submitted to CBSA against the cargo control number. Waiting for CBSA.' },
         cbsa_exam: { label: 'CBSA exam / hold', desc: 'CBSA selected the shipment for examination or placed a hold. We will update you.' },
         released: { label: 'Released by CBSA', desc: 'CBSA released the goods. They can be picked up or delivered.' },
@@ -192,6 +197,7 @@ const en = {
         permit: { label: 'Permits / other government forms', hint: 'CFIA, Health Canada, Transport Canada, etc. when your goods need them.' },
         'draft cad': { label: 'Draft entry (CAD) for approval', hint: 'Uploaded by DeepClear for you to check.' },
         'release cad': { label: 'Approved / signed entry (CAD)', hint: 'Upload after you approve the draft entry.' },
+        'brokerage invoice': { label: 'DeepClear invoice', hint: 'Our invoice for this file: brokerage fees, duties and taxes.' },
         other: { label: 'Other', hint: '' },
     },
 
@@ -330,6 +336,22 @@ const en = {
     },
 
     create: {
+        importer: 'Importer of record',
+        importerHint: 'Name, address and business number are filled in from this importer.',
+        importerOtherHint: 'Type the importer details below. Ask DeepClear to save them as an importer for next time.',
+        importerOther: 'Another importer (type the details)',
+        poaClient: {
+            missing: 'We need a signed power of attorney (POA) for this importer before we can clear the goods.',
+            sent: 'We are still waiting for the signed power of attorney (POA) for this importer.',
+            expired: 'The power of attorney (POA) for this importer has expired. Please upload a newly signed one.',
+        },
+        poaStaff: {
+            missing: 'No signed POA on file for this importer. Get it before clearing.',
+            sent: 'POA sent to the client, signed copy not back yet.',
+            expired: 'The POA for this importer has expired. Get a new one before clearing.',
+        },
+        poaOpenImporters: 'Upload the POA',
+        poaOpenClient: 'Open the client',
         titleAdmin: 'New customs file',
         titleClient: 'New shipment',
         subtitle: 'Fill in what you know now. Anything missing can be added later from the shipment page.',
@@ -377,6 +399,19 @@ const en = {
     },
 
     details: {
+        poaTitle: 'Power of attorney for {{name}}',
+        poaClient: {
+            missing: 'We need it signed before we can clear the goods.',
+            sent: 'We are still waiting for the signed copy.',
+            expired: 'Please upload a newly signed one.',
+        },
+        poaStaff: {
+            missing: 'Nothing on file. Get the signed POA before clearing.',
+            sent: 'Signed copy not back yet. Chase it before clearing.',
+            expired: 'Get a new signed POA before clearing.',
+        },
+        poaUpload: 'Upload the POA',
+        poaOpenClient: 'Open the client',
         shipment: 'Shipment',
         allShipments: 'All shipments',
         noneSelected: 'No shipment selected.',
@@ -427,6 +462,18 @@ const en = {
         stageTitle: 'Stage',
         stageSub: 'Release, exam and released also update automatically from Candata.',
         moveTo: 'Move to: {{stage}}',
+        clientReplied: 'Client replied',
+        clientRepliedText: 'The client answered after your last update. The next step is yours.',
+        seeTimeline: 'See messages',
+        requestFrom: 'Message from DeepClear',
+        uploadDocs: 'Upload documents',
+        reply: 'Reply',
+        askFor: 'Ask for (adds to the message)',
+        askForMessage: 'Please upload: {{list}}.',
+        showAll: 'Show all ({{count}})',
+        showLess: 'Show less',
+        releaseCadAdminHint: 'Signed by the client after they approve the draft.',
+        invoiceHint: 'Upload our invoice so the client can see it.',
         orSet: 'Or set stage',
         messageToClient: 'Message to client (optional)',
         messageAwaiting: 'e.g. Please upload the certificate of origin.',
@@ -661,6 +708,13 @@ const en = {
     },
 
     accounts: {
+        colImporters: 'Importers & POA',
+        noImporter: 'No importer',
+        importerCount_one: '{{count}} importer',
+        importerCount_other: '{{count}} importers',
+        poaIssues_one: 'POA needed',
+        poaIssues_other: 'POA needed ({{count}})',
+        poaOk: 'POA on file',
         clientsTitle: 'Clients',
         clientsSub: 'The importers you clear goods for. Each client signs in to the client portal to send shipments and follow CBSA status.',
         staffTitle: 'Staff',
@@ -745,6 +799,50 @@ const en = {
         message: 'Message to send',
         invite: "Hello {{name}},\n\nYour DeepClear account is ready.\n\nSign in at: {{url}}\nLogin name: {{login}}\nTemporary password: {{password}}\n\nYou will be asked to choose your own password when you first sign in.\n\nDeepClear",
         moreActions: 'More actions',
+    },
+
+    importers: {
+        title: 'Importers & POA',
+        clientSub: 'The businesses you import under, and the power of attorney that lets DeepClear clear goods for each one.',
+        clientLead: 'DeepClear needs a signed power of attorney (POA, also called an agency agreement) for each importer before we can clear goods. Upload the signed copy here once; every new shipment then just picks the importer. To add or change an importer, message DeepClear.',
+        staffSub: 'Each importer needs a signed POA before clearing. A new shipment picks one of these.',
+        none: 'No importers yet',
+        noneClient: 'DeepClear will add your importer details. You can still type them on each shipment.',
+        noneStaff: 'Add the business this client imports under, with its business number and RM account.',
+        add: 'Add importer',
+        addBtn: 'Add importer',
+        edit: 'Edit {{name}}',
+        added: 'Importer added.',
+        saved: 'Importer saved.',
+        removed: '{{name}} removed.',
+        confirmRemove: 'Remove {{name}}? Shipments already filed under it keep their details.',
+        legalName: 'Legal name',
+        legalNameHint: 'As registered with CRA.',
+        bn: 'Business number (RM)',
+        bnHint: 'CRA business number with RM import account.',
+        address: 'Address',
+        poaStatus: 'POA status',
+        status: { missing: 'Not on file', sent: 'Sent to client, waiting', signed: 'Signed' },
+        default: 'Default importer',
+        defaultHint: 'Picked first on a new shipment',
+        defaultBadge: 'Default',
+        makeDefault: 'Make default',
+        signedLabel: 'POA signed on',
+        expiresLabel: 'POA expires on',
+        expiresHint: 'Leave empty if it does not expire.',
+        signedOn: 'Signed {{date}}',
+        expiresOn: 'Expires {{date}}',
+        noExpiry: 'No expiry date',
+        poaFile: 'Signed POA',
+        uploadPoa: 'Upload signed POA',
+        replacePoa: 'Replace POA',
+        uploaded: 'Signed POA saved for {{name}}.',
+        poa: { ok: 'POA signed', expiring: 'POA expiring soon', expired: 'POA expired', sent: 'POA sent, not signed', missing: 'POA missing' },
+        clientNeeds: {
+            missing: 'Please sign the power of attorney and upload it here. We cannot clear goods for this importer without it.',
+            sent: 'We sent you the power of attorney. Please sign it and upload it here.',
+            expired: 'The power of attorney has expired. Please upload a newly signed one.',
+        },
     },
 };
 

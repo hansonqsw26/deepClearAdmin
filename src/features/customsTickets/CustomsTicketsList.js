@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, EmptyState, Page, Pager, Spinner, formatDate, useDebounced } from '../../ui/components';
+import { Badge, Button, Card, EmptyState, Page, Pager, Spinner, formatDate, useDebounced } from '../../ui/components';
 import { customsApi, IS_ADMIN } from './customs.api';
 import { StageBadge, CbsaBadge } from './CustomsBits';
 import { TRANSPORT_ICONS } from './customsMeta';
@@ -114,7 +114,7 @@ export default function CustomsTicketsList() {
                                                 </div>
                                                 <div className="dc-small dc-muted">{formatDate(row.create_date)}</div>
                                             </td>
-                                            {IS_ADMIN && <td data-label={t('list.col.client')}>{row.client_name}</td>}
+                                            {IS_ADMIN && <td data-label={t('list.col.client')}>{row.company_name || row.client_name}</td>}
                                             <td data-label={t('list.col.containers')}>
                                                 <span className="dc-mono">{row.container_number || '—'}</span>
                                                 {row.container_count > 1 && <span className="dc-small dc-muted"> {t('list.more', { count: row.container_count - 1 })}</span>}
@@ -124,7 +124,10 @@ export default function CustomsTicketsList() {
                                                 {row.cargo_control_number && <div className="dc-small dc-muted dc-mono">{row.cargo_control_number}</div>}
                                             </td>
                                             <td data-label={t('list.col.eta')}>{formatDate(row.eta)}</td>
-                                            <td data-label={t('list.col.stage')}><StageBadge stage={row.stage} label={row.stage_label} /></td>
+                                            <td data-label={t('list.col.stage')}>
+                                                <StageBadge stage={row.stage} label={row.stage_label} />
+                                                {row.client_replied && <div style={{ marginTop: 4 }}><Badge tone="violet" plain><i className="fa-regular fa-comment-dots" /> {t('details.clientReplied')}</Badge></div>}
+                                            </td>
                                             <td data-label={t('list.col.cbsa')}><CbsaBadge code={row.cb_status} label={row.cb_status_label} /></td>
                                         </tr>
                                     ))}

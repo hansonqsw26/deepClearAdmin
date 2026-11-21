@@ -13,6 +13,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, EmptyState, Field, Page, Spinner, formatDate, timeAgo, useDebounced, useToast } from '../../ui/components';
 import { call } from '../customsTickets/customs.api';
+import { ImportersPanel } from '../customsTickets/Importers';
 
 const CLIENT_PORTAL_URL = process.env.REACT_APP_CLIENT_PORTAL_URL || 'https://client.deepclear.ca';
 const ADMIN_PORTAL_URL = process.env.REACT_APP_ADMIN_PORTAL_URL || 'https://admin.deepclear.ca';
@@ -185,6 +186,17 @@ export function ClientAccounts() {
     });
     const actions = useRowActions({ kind: 'client', idKey: 'client_id', nameOf: clientLabel, onCreds: showCreds, reload: list.reload });
 
+    // ?client=ID (from a shipment's POA warning): open that client at its importers.
+    const openId = params.get('client');
+    useEffect(() => {
+        if (!openId || !list.result) return;
+        const row = list.result.data.find((r) => String(r.client_id) === openId);
+        setParams({}, { replace: true });
+        if (!row) return;
+        f.open(row, pickClient);
+        setTimeout(() => { const el = document.getElementById('dc-importers'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 400);
+    }, [openId, list.result]); // eslint-disable-line react-hooks/exhaustive-deps
+
     useEffect(() => {
         if (params.get('new')) { f.open(null); setParams({}, { replace: true }); }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -260,6 +272,12 @@ export function ClientAccounts() {
                 </Card>
             )}
 
+            {f.editing !== null && !isNew && (
+                <Card id="dc-importers" title={t('importers.title')} sub={t('importers.staffSub')}>
+                    <ImportersPanel clientId={f.editing.client_id} canManage onChange={list.reload} />
+                </Card>
+            )}
+
             <Card tight>
                 <Toolbar search={list.search} setSearch={list.setSearch} status={list.status} setStatus={list.setStatus} placeholder={t('accounts.searchClients')} />
                 <div style={{ marginTop: 12 }}>
@@ -277,7 +295,7 @@ export function ClientAccounts() {
                                     <tr>
                                         <th>{t('accounts.colCompany')}</th>
                                         <th>{t('accounts.colContact')}</th>
-                                        <th>{t('accounts.colBn')}</th>
+                                        <th>{t('accounts.colImporters')}</th>
                                         <th>{t('accounts.colOpen')}</th>
                                         <th>{t('accounts.colLastSignIn')}</th>
                                         <th>{t('accounts.colStatus')}</th>
@@ -299,7 +317,18 @@ export function ClientAccounts() {
                                                 {r.email && <div className="dc-small dc-muted">{r.email}</div>}
                                                 {r.phone && <div className="dc-small dc-muted">{r.phone}</div>}
                                             </td>
-                                            <td data-label={t('accounts.colBn')}>{r.importer_bn ? <span className="dc-mono">{r.importer_bn}</span> : <span className="dc-muted">—</span>}</td>
+                                            <td data-label={t('accounts.colImporters')}>
+                                                {r.importer_count === 0 ? <Badge tone="gray" plain>{t('accounts.noImporter')}</Badge> : (
+                                                    <>
+                                                        <div className="dc-small">{t('accounts.importerCount', { count: r.importer_count })}</div>
+                                                        <div style={{ marginTop: 4 }}>
+                                                            {r.poa_issues > 0
+                                                                ? <Badge tone="red">{t('accounts.poaIssues', { count: r.poa_issues })}</Badge>
+                                                                : <Badge tone="green" plain>{t('accounts.poaOk')}</Badge>}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </td>
                                             <td data-label={t('accounts.colOpen')}>{r.open_shipments || <span className="dc-muted">0</span>}</td>
                                             <td data-label={t('accounts.colLastSignIn')}><LastSignIn row={r} /></td>
                                             <td data-label={t('accounts.colStatus')}><StatusBadge row={r} /></td>

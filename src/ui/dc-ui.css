@@ -258,3 +258,17 @@
 .dc-creds-msg { width: 100%; min-height: 170px; font-family: inherit; font-size: 13px; white-space: pre-wrap; }
 .dc-icon-actions { display: inline-flex; gap: 2px; white-space: nowrap; }
 @media (max-width: 640px) { .dc-creds { grid-template-columns: 1fr auto; } .dc-creds dt { grid-column: 1 / -1; margin-bottom: -6px; } }
+
+/* Shipment page: on narrow screens the actions and messages come before the long detail cards. */
+@media (max-width: 1100px) { .dc-actions-first > div:last-child { order: -1; } }
+.dc-request { margin-top: 10px; padding: 10px 12px; border-radius: var(--dc-radius-sm); background: var(--dc-surface, #fff); color: var(--dc-ink); border-left: 3px solid currentColor; }
+.dc-request .dc-strong { margin-bottom: 2px; }
+
+/* Importer profiles and POA */
+.dc-importer-main { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.dc-importer-poa { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.dc-importer-pick { border: 1px solid var(--dc-line); border-radius: var(--dc-radius-sm); padding: 12px 14px; background: var(--dc-surface-2); display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-top: 8px; }
+@media (max-width: 640px) {
+  .dc-importer-main, .dc-importer-pick { flex-direction: column; }
+  .dc-importer-poa { text-align: left; align-items: flex-start; }
+}

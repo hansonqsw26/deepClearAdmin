@@ -4,11 +4,12 @@
  * Admins pick the client and may also enter broker fields (transaction number).
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { docName } from '../../i18n';
 import { Button, Card, DropZone, Field, Page, useToast } from '../../ui/components';
-import { customsApi, IS_ADMIN } from './customs.api';
+import { customsApi, importersApi, IS_ADMIN } from './customs.api';
+import { PoaBadge, canManageAccounts, poaNeedsAction } from './Importers';
 import { COUNTRIES, CURRENCIES, TRANSPORT_ICONS, TRANSPORT_LABELS, checkContainer, countryName, useCustomsOptions } from './customsMeta';
 
 const EMPTY_CONTAINER = { container_number: '', size_type: '40HC', seal_number: '' };
@@ -38,6 +39,8 @@ export default function CreateCustomsTicket() {
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
     const [progress, setProgress] = useState('');
+    const [importers, setImporters] = useState(null); // null = not loaded
+    const [importerId, setImporterId] = useState('');
 
     const iso = ISO_MODES.includes(shipment.transport_mode);
 
@@ -45,6 +48,45 @@ export default function CreateCustomsTicket() {
         if (!IS_ADMIN) return;
         customsApi.clients().then((r) => setClients(r.data || [])).catch((e) => toast.error(e.message));
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // The importers on file for this client; the default one is picked and filled in.
+    const fillFrom = (imp) => setShipment((s) => ({
+        ...s,
+        consignee_name: imp ? imp.legal_name : '',
+        consignee_address: imp ? imp.address || '' : '',
+        importer_bn: imp ? imp.importer_bn : '',
+    }));
+    useEffect(() => {
+        setImporters(null);
+        setImporterId('');
+        if (IS_ADMIN && !clientId) return;
+        importersApi.list(IS_ADMIN ? Number(clientId) : undefined).then((r) => {
+            const list = r.data || [];
+            setImporters(list);
+            const first = list.find((i) => i.is_default) || list[0];
+            if (first) { setImporterId(String(first.importer_id)); fillFrom(first); } else if (IS_ADMIN) fillFrom(null);
+        }).catch(() => setImporters([]));
+    }, [clientId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const importer = (importers || []).find((i) => String(i.importer_id) === importerId) || null;
+    const pickImporter = (e) => {
+        const id = e.target.value;
+        setImporterId(id);
+        setErrors((x) => ({ ...x, importer_id: undefined, importer_bn: undefined, consignee_name: undefined }));
+        fillFrom((importers || []).find((i) => String(i.importer_id) === id) || null);
+    };
+
+    // Clients with no importer profile yet: start from the company details saved on their account.
+    useEffect(() => {
+        const acc = !IS_ADMIN && options && options.account;
+        if (!acc || !importers || importers.length) return;
+        setShipment((s) => ({
+            ...s,
+            consignee_name: s.consignee_name || acc.company_name || '',
+            consignee_address: s.consignee_address || acc.address || '',
+            importer_bn: s.importer_bn || acc.importer_bn || '',
+        }));
+    }, [options, importers]);
 
     const set = (field) => (e) => {
         const value = e.target.value;
@@ -98,7 +140,7 @@ export default function CreateCustomsTicket() {
             setProgress(t('create.creating'));
             const body = {
                 note: note || undefined,
-                shipment,
+                shipment: { ...shipment, importer_id: importers && importers.length ? (importerId ? Number(importerId) : null) : undefined },
                 containers: containers.map((c) => ({
                     container_number: c.container_number,
                     size_type: iso ? c.size_type : undefined,
@@ -187,13 +229,39 @@ export default function CreateCustomsTicket() {
                         </Card>
 
                         <Card title={t('create.parties')}>
+                            {importers && importers.length > 0 && (
+                                <div style={{ marginBottom: 16 }}>
+                                    <Field label={t('create.importer')} name="importer_id" as="select" value={importerId} onChange={pickImporter} error={err('importer_id')}
+                                        hint={importer ? t('create.importerHint') : t('create.importerOtherHint')}
+                                        options={[...importers.map((i) => ({ value: String(i.importer_id), label: `${i.legal_name} · ${i.importer_bn}` })), { value: '', label: t('create.importerOther') }]} />
+                                    {importer && (
+                                        <div className="dc-importer-pick">
+                                            <div>
+                                                <div className="dc-strong">{importer.legal_name}</div>
+                                                <div className="dc-small dc-mono">{importer.importer_bn}</div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}><PoaBadge importer={importer} /></div>
+                                        </div>
+                                    )}
+                                    {importer && poaNeedsAction(importer.poa_state) && (
+                                        <div className="dc-alert dc-tone-amber" style={{ marginTop: 8 }}>
+                                            <i className="fa-solid fa-file-signature" />{' '}
+                                            {IS_ADMIN ? t(`create.poaStaff.${importer.poa_state}`) : t(`create.poaClient.${importer.poa_state}`)}{' '}
+                                            {!IS_ADMIN && <Link className="dc-strong" style={{ textDecoration: 'underline' }} to="/importers">{t('create.poaOpenImporters')}</Link>}
+                                            {canManageAccounts() && <Link className="dc-strong" style={{ textDecoration: 'underline' }} to={`/client-accounts?client=${clientId}`}>{t('create.poaOpenClient')}</Link>}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             <div className="dc-grid dc-grid-2">
                                 <Field label={t('field.shipper')} required name="shipper_name" value={shipment.shipper_name} onChange={set('shipper_name')} error={err('shipper_name')} />
                                 <Field label={t('field.consignee')} required name="consignee_name" value={shipment.consignee_name} onChange={set('consignee_name')} error={err('consignee_name')} />
                                 <Field label={t('field.shipperAddress')} name="shipper_address" as="textarea" rows={2} value={shipment.shipper_address} onChange={set('shipper_address')} />
                                 <Field label={t('field.consigneeAddress')} name="consignee_address" as="textarea" rows={2} value={shipment.consignee_address} onChange={set('consignee_address')} />
-                                <Field label={t('field.importerBn')} name="importer_bn" upper value={shipment.importer_bn} onChange={set('importer_bn')}
-                                    error={err('importer_bn')} placeholder="123456789RM0001" hint={t('field.importerBnHint')} />
+                                {!importer && (
+                                    <Field label={t('field.importerBn')} name="importer_bn" upper value={shipment.importer_bn} onChange={set('importer_bn')}
+                                        error={err('importer_bn')} placeholder="123456789RM0001" hint={t('field.importerBnHint')} />
+                                )}
                             </div>
                         </Card>
 

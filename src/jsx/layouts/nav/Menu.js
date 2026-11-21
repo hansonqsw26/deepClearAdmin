@@ -47,14 +47,15 @@ export const MenuList = [
         iconStyle: <i className="fa-solid fa-users" />,
         hideForDepartments: [2],
         content: [
-            { title: 'New client account', to: 'create-client-account' },
-            { title: 'New staff account', to: 'create-admin-account' },
+            { title: 'Clients', to: 'client-accounts' },
+            { title: 'Staff', to: 'staff-accounts' },
         ],
     },
 ];
 
 /** The menu as a given admin department sees it. */
 export function menuForDepartment(department) {
-    const visible = (item) => !(item.hideForDepartments || []).includes(department);
+    const dep = Number(department);
+    const visible = (item) => !(item.hideForDepartments || []).includes(dep);
     return MenuList.filter(visible).map((item) => (item.content ? { ...item, content: item.content.filter(visible) } : item));
 }

@@ -26,8 +26,9 @@ import Error503 from "./pages/Error503";
 // Feature pages are loaded on demand to keep the first download small.
 const QuoteList = lazy(() => import("../features/quotes/QuoteList/QuoteList"));
 const CreateQuote = lazy(() => import("../features/quotes/CreateQuote/CreateQuote"));
-const CreateAdminUser = lazy(() => import("../features/accounts/CreateAdminUser"));
-const CreateClientUser = lazy(() => import("../features/accounts/CreateClientUser"));
+const ClientAccounts = lazy(() => import("../features/accounts/Accounts").then((m) => ({ default: m.ClientAccounts })));
+const StaffAccounts = lazy(() => import("../features/accounts/Accounts").then((m) => ({ default: m.StaffAccounts })));
+const SetPassword = lazy(() => import("../features/auth/SetPassword"));
 const CreateTruckTicket = lazy(() => import("../features/truckTickets/CreateTruckTicket"));
 const TicketsList = lazy(() => import("../features/truckTickets/TicketsList"));
 const TicketDetails = lazy(() => import("../features/truckTickets/TicketDetails"));
@@ -46,8 +47,12 @@ export const appRoutes = [
   { url: "create-quote", component: <CreateQuote /> },
 
   // Accounts
-  { url: "create-admin-account", component: <CreateAdminUser /> },
-  { url: "create-client-account", component: <CreateClientUser /> },
+  { url: "client-accounts", component: <ClientAccounts /> },
+  { url: "staff-accounts", component: <StaffAccounts /> },
+  { url: "change-password", component: <SetPassword /> },
+  // old links
+  { url: "create-client-account", component: <Navigate to="/client-accounts?new=1" replace /> },
+  { url: "create-admin-account", component: <Navigate to="/staff-accounts?new=1" replace /> },
 
   // Truck tickets
   { url: "create-truck-ticket", component: <CreateTruckTicket /> },

@@ -420,7 +420,7 @@ export default function TicketSummary() {
                     {IS_ADMIN && (
                         <select className="dc-input" aria-label={t('summary.col.client')} value={clientId} onChange={(e) => update({ client: e.target.value })}>
                             <option value="">{t('summary.allClients')}</option>
-                            {clients.map((c) => <option key={c.client_id} value={c.client_id}>{c.client_name}</option>)}
+                            {clients.map((c) => <option key={c.client_id} value={c.client_id}>{c.company_name ? `${c.company_name} (${c.client_name})` : c.client_name}</option>)}
                         </select>
                     )}
                     <select className="dc-input" aria-label={t('summary.transport')} value={mode} onChange={(e) => update({ mode: e.target.value })}>

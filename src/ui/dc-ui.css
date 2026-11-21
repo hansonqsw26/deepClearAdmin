@@ -243,3 +243,18 @@
 .dc-lang.dark button:hover { color: #fff; }
 .dc-lang.dark button.active { background: #fff; color: #14215c; }
 .header-right .dc-lang-item { display: flex; align-items: center; margin-right: 12px; }
+
+/* Choose-your-password step after a temporary password */
+.dc-forced-pw { min-height: 100vh; background: var(--dc-surface-2, #f4f7f8); display: flex; flex-direction: column; align-items: center; padding: 24px 16px 48px; }
+.dc-forced-pw-top { width: 100%; max-width: 520px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+.dc-forced-pw-brand { font-weight: 700; font-size: 18px; color: var(--dc-ink); display: inline-flex; gap: 10px; align-items: center; }
+.dc-forced-pw-brand i { color: var(--dc-teal, #2bb3a7); }
+.dc-forced-pw-card { width: 100%; max-width: 520px; }
+
+/* Accounts: sign-in details to share */
+.dc-creds { display: grid; grid-template-columns: max-content 1fr auto; gap: 10px 16px; align-items: center; margin: 12px 0 16px; }
+.dc-creds dt { color: var(--dc-muted); font-size: 13px; }
+.dc-creds dd { margin: 0; font-family: SFMono-Regular, Menlo, Consolas, monospace; font-size: 15px; word-break: break-all; }
+.dc-creds-msg { width: 100%; min-height: 170px; font-family: inherit; font-size: 13px; white-space: pre-wrap; }
+.dc-icon-actions { display: inline-flex; gap: 2px; white-space: nowrap; }
+@media (max-width: 640px) { .dc-creds { grid-template-columns: 1fr auto; } .dc-creds dt { grid-column: 1 / -1; margin-bottom: -6px; } }

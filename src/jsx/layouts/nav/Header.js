@@ -24,8 +24,9 @@ const PAGE_TITLES = {
   "ticket-details": "Trucking",
   "quote-list": "Quotes",
   "create-quote": "Quotes",
-  "create-client-account": "Accounts",
-  "create-admin-account": "Accounts",
+  "client-accounts": "Accounts",
+  "staff-accounts": "Accounts",
+  "change-password": "Accounts",
 };
 
 const Header = ({ onNote }) => {

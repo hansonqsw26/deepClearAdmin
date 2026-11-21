@@ -52,7 +52,9 @@ function Login({ errorMessage, showLoading }) {
     const rawError = errorMessage && (typeof errorMessage === 'string' ? errorMessage : errorMessage.message || errorMessage.error);
     const serverError = rawError && /invalid credentials/i.test(rawError)
         ? t('login.badCredentials')
-        : rawError;
+        : rawError && /turned off/i.test(rawError)
+            ? t('login.accountOff')
+            : rawError;
 
     function onSubmit(e) {
         e.preventDefault();

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '../../ui/components';
 import { cbsaName, stageDesc, stageName } from '../../i18n';
 import { STAGE_TONE, STAGE_ICON, cbsaTone } from './customsMeta';
+import { IS_ADMIN } from './customs.api';
 
 /** `label` is the API's English name, used only when the stage key is unknown. */
 export function StageBadge({ stage, label }) {
@@ -21,7 +22,7 @@ export function CbsaBadge({ code, label }) {
  * Progress along the normal path. Side stages (action needed, CBSA exam) show
  * as a warning on the step they detour from; cancelled shows on its own.
  */
-export function StageStepper({ stage, stages, mainPath }) {
+export function StageStepper({ stage, stages, mainPath, children }) {
     const { t } = useTranslation();
     if (!stages) return null;
     const byKey = Object.fromEntries(stages.map((s) => [s.key, s]));
@@ -49,7 +50,8 @@ export function StageStepper({ stage, stages, mainPath }) {
                 <i className={STAGE_ICON[stage] || 'fa-solid fa-circle-info'} />
                 <div>
                     <b>{label(stage)}</b>
-                    {stageDesc(stage, current.description)}
+                    {(IS_ADMIN && t(`stageAdmin.${stage}`, { defaultValue: '' })) || stageDesc(stage, current.description)}
+                    {children}
                 </div>
             </div>
         </div>

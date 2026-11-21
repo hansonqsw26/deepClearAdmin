@@ -56,7 +56,7 @@ const SideBar = () => {
 
     if (storedUserData) {
       setUserData({
-        name: storedUserData.email || "",
+        name: storedUserData.name || storedUserData.email || "",
         email: storedUserData.email || "",
         profilePic: storedUserData.profilePic || profile,
         department: storedUserData.department || null,

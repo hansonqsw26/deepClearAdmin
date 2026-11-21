@@ -31,7 +31,7 @@ export default function Dashboard() {
     }, []);
 
     const go = (path) => () => navigate(path);
-    const hello = session.email ? t('dash.hello', { email: session.email }) : t('dash.helloPlain');
+    const hello = (session.name || session.email) ? t('dash.hello', { email: session.name || session.email }) : t('dash.helloPlain');
     const newLabel = IS_ADMIN ? t('common.newFile') : t('common.newShipment');
 
     return (
@@ -68,11 +68,15 @@ export default function Dashboard() {
                                             <li key={row.main_id} className="clickable" onClick={go(`/customs-ticket-details?main_id=${row.main_id}`)}>
                                                 <div style={{ minWidth: 0 }}>
                                                     <div className="dc-strong">{row.reference_number}</div>
-                                                    {IS_ADMIN && <div className="dc-small dc-muted">{row.client_name}</div>}
+                                                    {IS_ADMIN && <div className="dc-small dc-muted">{row.company_name || row.client_name}</div>}
                                                 </div>
-                                                <Badge tone={STAGE_TONE[row.stage === 'awaiting_client' ? 'awaiting_client' : 'cbsa_exam']}>
-                                                    {row.attention_status != null ? cbsaName(row.attention_status, row.attention_label) : stageName(row.stage, row.attention_label)}
-                                                </Badge>
+                                                {row.client_replied ? (
+                                                    <Badge tone="violet"><i className="fa-regular fa-comment-dots" /> {t('details.clientReplied')}</Badge>
+                                                ) : (
+                                                    <Badge tone={STAGE_TONE[row.stage === 'awaiting_client' ? 'awaiting_client' : 'cbsa_exam']}>
+                                                        {row.attention_status != null ? cbsaName(row.attention_status, row.attention_label) : stageName(row.stage, row.attention_label)}
+                                                    </Badge>
+                                                )}
                                             </li>
                                         ))}
                                     </ul>
@@ -108,7 +112,7 @@ export default function Dashboard() {
                                                 <div style={{ minWidth: 0 }}>
                                                     <div className="dc-strong">{row.reference_number}</div>
                                                     <div className="dc-small dc-muted dc-truncate">
-                                                        {IS_ADMIN && `${row.client_name} · `}{row.container_numbers || t('dash.noContainer')} · {formatDate(row.create_date)}
+                                                        {IS_ADMIN && `${row.company_name || row.client_name} · `}{row.container_numbers || t('dash.noContainer')} · {formatDate(row.create_date)}
                                                     </div>
                                                 </div>
                                                 <StageBadge stage={row.stage} label={row.stage_label} />

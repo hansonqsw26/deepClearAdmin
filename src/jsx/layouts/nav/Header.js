@@ -13,6 +13,7 @@ import { ThemeContext } from "../../../context/ThemeContext";
 const PAGE_TITLES = {
   "": "Dashboard",
   "dashboard": "Dashboard",
+  "ticket-summary": "Ticket summary",
   "customs-tickets-list": "Customs",
   "create-customs-ticket": "Customs",
   "customs-ticket-details": "Customs",

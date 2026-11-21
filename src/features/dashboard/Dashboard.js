@@ -42,7 +42,12 @@ export default function Dashboard() {
         <Page
             title={hello}
             subtitle={IS_ADMIN ? 'What needs your attention today.' : 'Where your shipments stand right now.'}
-            actions={<Button icon="fa-solid fa-plus" onClick={go('/create-customs-ticket')}>{IS_ADMIN ? 'New customs file' : 'New shipment'}</Button>}
+            actions={(
+                <>
+                    <Button variant="secondary" icon="fa-solid fa-chart-column" onClick={go('/ticket-summary')}>Ticket summary</Button>
+                    <Button icon="fa-solid fa-plus" onClick={go('/create-customs-ticket')}>{IS_ADMIN ? 'New customs file' : 'New shipment'}</Button>
+                </>
+            )}
         >
             {error && <div className="dc-alert dc-tone-red">{error}</div>}
             {!data && !error && <Spinner />}

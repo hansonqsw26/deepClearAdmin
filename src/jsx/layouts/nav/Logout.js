@@ -32,6 +32,10 @@ function LogoutPage(props){
     }
     return(
         <>
+            <button className="dropdown-item ai-icon" onClick={() => navigate('/change-password')}>
+                <i className="fa-solid fa-key text-primary" style={{ width: 18 }} />
+                <span className="ms-2">{t('password.menu')}</span>
+            </button>
             <button  className="dropdown-item ai-icon" onClick={onLogout}>
                 <svg
                   id="icon-logout" xmlns="http://www.w3.org/2000/svg"

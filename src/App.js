@@ -14,6 +14,7 @@ import './css/style.css';
 
 const Login = lazy(() => import('./features/auth/Login'));
 const Index = lazy(() => import('./jsx/index'));
+const ForcedPasswordChange = lazy(() => import('./features/auth/SetPassword').then((m) => ({ default: m.ForcedPasswordChange })));
 
 const Preloader = () => (
     <div id="preloader">
@@ -29,6 +30,8 @@ function App() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const loggedIn = useSelector(isAuthenticated);
+    // Signed in with a temporary password: choose a new one before anything else.
+    const mustChange = useSelector((s) => Boolean(s.auth && s.auth.auth && s.auth.auth.mustChangePassword));
     useTranslation(); // re-render every page when the language changes
 
     useEffect(() => {
@@ -39,7 +42,9 @@ function App() {
         <div className="vh-100">
             <Suspense fallback={<Preloader />}>
                 <Routes>
-                    {loggedIn ? (
+                    {loggedIn && mustChange ? (
+                        <Route path="*" element={<ForcedPasswordChange />} />
+                    ) : loggedIn ? (
                         <Route path="/*" element={<Index />} />
                     ) : (
                         <>

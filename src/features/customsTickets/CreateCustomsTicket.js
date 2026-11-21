@@ -152,7 +152,7 @@ export default function CreateCustomsTicket() {
                             <Card title={t('create.clientCard')}>
                                 <Field label={t('field.client')} required name="client_id" as="select" value={clientId} error={err('client_id')}
                                     onChange={(e) => { setClientId(e.target.value); setErrors((x) => ({ ...x, client_id: undefined })); }}
-                                    options={[{ value: '', label: t('field.chooseClient') }, ...clients.map((c) => ({ value: c.client_id, label: c.client_name }))]} />
+                                    options={[{ value: '', label: t('field.chooseClient') }, ...clients.map((c) => ({ value: c.client_id, label: c.company_name ? `${c.company_name} (${c.client_name})` : c.client_name }))]} />
                             </Card>
                         )}
 

@@ -23,7 +23,10 @@ export function loginAction(admin_name, admin_password, navigate) {
                 const session = {
                     email: data.adminName,
                     localId: data.adminId,
-                    department: data.department,
+                    // The database stores it as text ('2'); the app compares numbers.
+                    department: data.department === null || data.department === undefined || data.department === '' || Number.isNaN(Number(data.department)) ? data.department : Number(data.department),
+                    name: data.fullName || data.adminName,
+                    mustChangePassword: Boolean(data.mustChangePassword),
                     idToken: data.token,
                     expiresIn: 3600,
                 };

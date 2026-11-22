@@ -96,6 +96,7 @@ const EVENT_PATTERNS = [
     [/^Updated automatically from CBSA status "(.+)"\.$/, (m) => t('event.autoStage', { status: cbsaFromLabel(m[1]) })],
     [/^Customs entry (\d{14}) set(?: for (.+))?\.$/, (m) => t('event.entrySet', { txn: m[1], which: m[2] ? t('event.entryFor', { list: m[2] }) : '' })],
     [/^Customs entry removed(?: from (.+))?\.$/, (m) => t('event.entryRemoved', { which: m[1] ? t('event.entryFrom', { list: m[1] }) : '' })],
+    [/^(Vessel|Port|Rail) ETA for (\S+): (\S+ \S+) \((.+)\)\.$/, (m) => t('event.etaUpdate', { kind: t(`event.etaKind.${m[1]}`), n: m[2], when: m[3], source: m[4] })],
     [/^(.+?) uploaded: (.+)$/s, (m) => (docKey(m[1]) ? t('event.docUploaded', { doc: docName(m[1]), name: m[2] }) : null)],
 ];
 export function eventText(message) {

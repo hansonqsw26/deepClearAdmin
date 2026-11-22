@@ -38,6 +38,7 @@ export const customsApi = {
     addContainer: (mainId, body) => call('/addCbContainer', { main_id: mainId, ...body }),
     updateContainer: (containerId, body) => call('/updateCbContainer', { container_id: containerId, ...body }),
     removeContainer: (containerId) => call('/removeCbContainer', { container_id: containerId }),
+    refreshEtas: (mainId) => call('/refreshCbEtas', { main_id: mainId }),
     setEntry: (mainId, transactionNumber, containerIds) => call('/setCbEntry', { main_id: mainId, transaction_number: transactionNumber, container_ids: containerIds }),
     comment: (mainId, message, internal = false) => call('/addCbComment', { main_id: mainId, message, internal }),
     setStage: (mainId, stage, message) => call('/setCbStage', { main_id: mainId, stage, message }),

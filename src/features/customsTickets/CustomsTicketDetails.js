@@ -279,20 +279,28 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
     const [saving, setSaving] = useState(false);
     const [entry, setEntry] = useState(null); // { txn, ids: Set } while the customs-entry panel is open
 
+    const [refreshing, setRefreshing] = useState(false);
+
     const startEdit = (c) => {
         setEntry(null);
         setForm(c ? {
             container_number: c.container_number || '', size_type: c.size_type || '', seal_number: c.seal_number || '',
             transaction_number: c.transaction_number || '', destination: c.destination || '', eta: toLocalInput(c.eta),
-        } : { container_number: '', size_type: '40HC', seal_number: '', transaction_number: '', destination: '', eta: '' });
+            vessel_eta: toLocalInput(c.vessel_eta), port_eta: toLocalInput(c.port_eta), rail_eta: toLocalInput(c.rail_eta),
+            rail_carrier: c.rail_carrier || '', rail_destination: c.rail_destination || '',
+        } : {
+            container_number: '', size_type: '40HC', seal_number: '', transaction_number: '', destination: '', eta: '',
+            vessel_eta: '', port_eta: '', rail_eta: '', rail_carrier: '', rail_destination: '',
+        });
         setErrors({});
         setEditing(c ? c.container_id : 'new');
     };
 
     const save = async () => {
         setSaving(true);
-        const body = { ...form, eta: form.eta ? form.eta.replace('T', ' ') : '' };
-        if (!IS_ADMIN) delete body.transaction_number;
+        const body = { ...form };
+        for (const f of ['eta', ...ETA_FIELDS]) body[f] = form[f] ? form[f].replace('T', ' ') : '';
+        if (!IS_ADMIN) for (const f of ['transaction_number', ...ETA_FIELDS, 'rail_carrier', 'rail_destination']) delete body[f];
         try {
             if (editing === 'new') await customsApi.addContainer(ticket.main_id, body);
             else await customsApi.updateContainer(editing, body);
@@ -350,6 +358,25 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
             setSaving(false);
         }
     };
+    /* Ask the official ETA sources now (admin). */
+    const refreshEtas = async () => {
+        setRefreshing(true);
+        try {
+            const r = await customsApi.refreshEtas(ticket.main_id);
+            const connected = r.sources && (r.sources.carriers.length + r.sources.railways.length) > 0;
+            if (!connected) toast.error(t('details.etasNoSource'));
+            else if (r.changed) toast.success(t('details.etasRefreshed', { count: r.changed }));
+            else toast.success(t('details.etasNoChange'));
+            onSaved();
+        } catch (e) {
+            toast.error(e.message);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+    const etaNotes = IS_ADMIN ? [...new Set(containers.map((c) => c.eta_check_note).filter(Boolean))] : [];
+    const lastCheck = containers.map((c) => c.eta_checked_at).filter(Boolean).sort().pop();
+
     const missingTxn = containers.filter((c) => !c.transaction_number).length;
     const closed = ['invoiced', 'completed', 'cancelled'].includes(ticket.stage);
     const showMissing = IS_ADMIN && missingTxn > 0 && !closed && ticket.stage !== 'submitted';
@@ -361,6 +388,7 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
             tight
             actions={canChange && editing === null && entry === null && (
                 <>
+                    {IS_ADMIN && iso && containers.length > 0 && <Button variant="secondary" size="sm" icon="fa-solid fa-rotate" busy={refreshing} onClick={refreshEtas}>{t('details.refreshEtas')}</Button>}
                     {IS_ADMIN && containers.length > 0 && <Button variant="secondary" size="sm" icon="fa-solid fa-file-signature" onClick={openEntry}>{t('details.entryButton')}</Button>}
                     <Button variant="secondary" size="sm" icon="fa-solid fa-plus" onClick={() => startEdit(null)}>{t('common.add')}</Button>
                 </>
@@ -409,7 +437,7 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
                             <tr>
                                 <th>{iso ? t('details.colContainer') : t('details.colUnit')}</th>
                                 <th>{t('field.sealShort')}</th>
-                                <th>{t('field.etaShort')}</th>
+                                <th>{iso ? t('details.colEtas') : t('field.etaShort')}</th>
                                 {IS_ADMIN && <th>{t('details.colTxn')}</th>}
                                 <th>{t('details.colCbsa')}</th>
                                 {canChange && <th aria-label="actions" />}
@@ -423,7 +451,9 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
                                         {c.size_type && <span className="dc-small dc-muted"> · {c.size_type}</span>}
                                     </td>
                                     <td data-label={t('field.sealShort')}>{display(c.seal_number)}</td>
-                                    <td data-label={t('field.etaShort')} style={{ whiteSpace: 'nowrap' }}>{formatDate(c.eta, true)}</td>
+                                    <td data-label={iso ? t('details.colEtas') : t('field.etaShort')}>
+                                        {iso ? <EtaList c={c} /> : <span style={{ whiteSpace: 'nowrap' }}>{formatDate(c.eta, true)}</span>}
+                                    </td>
                                     {IS_ADMIN && <td data-label={t('details.colTxn')} className="dc-mono">{display(c.transaction_number)}</td>}
                                     <td data-label={t('details.colCbsa')}>
                                         <CbsaBadge code={c.cb_status} label={c.cb_status_label} />
@@ -441,6 +471,13 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
                     </table>
                 </div>
             )}
+            {IS_ADMIN && iso && (etaNotes.length > 0 || lastCheck) && (
+                <div className="dc-small dc-muted" style={{ padding: '8px 16px 12px' }}>
+                    <i className="fa-solid fa-satellite-dish" style={{ marginRight: 6 }} />
+                    {lastCheck && t('details.etaChecked', { when: formatDate(lastCheck, true) })}
+                    {etaNotes.length > 0 && <span>{lastCheck ? ' · ' : ''}{etaNotes.join(' ')}</span>}
+                </div>
+            )}
             {editing !== null && (
                 <div style={{ padding: 16, borderTop: '1px solid var(--dc-line)' }}>
                     <div className="dc-section-title">{editing === 'new' ? t('details.addContainerTitle') : t('details.editContainerTitle')}</div>
@@ -453,13 +490,32 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
                                 options={[{ value: '', label: '—' }, ...options.container_sizes.map((s) => ({ value: s, label: s }))]} />
                         )}
                         <Field label={t('field.sealShort')} name="seal_number" value={form.seal_number} onChange={(e) => setForm((f) => ({ ...f, seal_number: e.target.value }))} />
-                        <Field label={t('field.etaShort')} name="eta" type="datetime-local" value={form.eta} onChange={(e) => setForm((f) => ({ ...f, eta: e.target.value }))} />
+                        <Field label={IS_ADMIN && iso ? t('details.etaExpected') : t('field.etaShort')} name="eta" type="datetime-local" value={form.eta} onChange={(e) => setForm((f) => ({ ...f, eta: e.target.value }))} />
                         <Field label={t('field.destinationShort')} name="destination" value={form.destination} onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))} />
                         {IS_ADMIN && (
                             <Field label={t('field.transactionNumber')} name="transaction_number" value={form.transaction_number} error={errors.transaction_number}
                                 hint={t('field.transactionHintAdmin')} onChange={(e) => setForm((f) => ({ ...f, transaction_number: e.target.value }))} />
                         )}
                     </div>
+                    {IS_ADMIN && iso && (
+                        <>
+                            <div className="dc-section-title" style={{ marginTop: 16 }}>{t('details.etasTitle')}</div>
+                            <p className="dc-small dc-muted" style={{ marginTop: 0 }}>{t('details.etasHelp')}</p>
+                            <div className="dc-grid dc-grid-3">
+                                <Field label={t('details.etaVessel')} name="vessel_eta" type="datetime-local" value={form.vessel_eta} error={errors.vessel_eta}
+                                    onChange={(e) => setForm((f) => ({ ...f, vessel_eta: e.target.value }))} />
+                                <Field label={t('details.etaPort')} name="port_eta" type="datetime-local" value={form.port_eta} error={errors.port_eta}
+                                    onChange={(e) => setForm((f) => ({ ...f, port_eta: e.target.value }))} />
+                                <Field label={t('details.railCarrier')} name="rail_carrier" as="select" value={form.rail_carrier} error={errors.rail_carrier}
+                                    onChange={(e) => setForm((f) => ({ ...f, rail_carrier: e.target.value }))}
+                                    options={[{ value: '', label: t('details.railCarrierNone') }, { value: 'CN', label: 'CN (Canadian National)' }, { value: 'CPKC', label: 'CPKC (Canadian Pacific Kansas City)' }]} />
+                                <Field label={t('details.etaRail')} name="rail_eta" type="datetime-local" value={form.rail_eta} error={errors.rail_eta}
+                                    onChange={(e) => setForm((f) => ({ ...f, rail_eta: e.target.value }))} />
+                                <Field label={t('details.railDestination')} name="rail_destination" value={form.rail_destination} placeholder={t('details.railDestinationPlaceholder')}
+                                    onChange={(e) => setForm((f) => ({ ...f, rail_destination: e.target.value }))} />
+                            </div>
+                        </>
+                    )}
                     <div className="dc-actions end" style={{ marginTop: 14 }}>
                         <Button variant="ghost" onClick={() => setEditing(null)}>{t('common.cancel')}</Button>
                         <Button busy={saving} icon="fa-solid fa-check" onClick={save}>{t('common.save')}</Button>
@@ -467,6 +523,52 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
                 </div>
             )}
         </Card>
+    );
+}
+
+/** The three tracked ETAs of one container, each with where it came from. */
+const ETA_FIELDS = ['vessel_eta', 'port_eta', 'rail_eta'];
+
+function EtaSource({ source, updatedAt }) {
+    const { t } = useTranslation();
+    if (!source) return null;
+    const name = t(`details.source.${source}`, { defaultValue: source });
+    return (
+        <Badge tone={source === 'manual' ? 'gray' : 'blue'} plain title={updatedAt ? t('details.etaSourceTitle', { source: name, when: formatDate(updatedAt, true) }) : name}>
+            {name}
+        </Badge>
+    );
+}
+
+function EtaList({ c }) {
+    const { t } = useTranslation();
+    const rows = [
+        c.vessel_eta && { key: 'vessel', label: t('details.etaVessel'), when: c.vessel_eta, source: c.vessel_eta_source, updated: c.vessel_eta_updated_at },
+        c.port_eta && { key: 'port', label: t('details.etaPort'), when: c.port_eta, source: c.port_eta_source, updated: c.port_eta_updated_at },
+        (c.rail_eta || c.rail_carrier) && {
+            key: 'rail',
+            label: c.rail_carrier ? t('details.etaRailBy', { carrier: c.rail_carrier }) : t('details.etaRail'),
+            when: c.rail_eta,
+            source: c.rail_eta_source,
+            updated: c.rail_eta_updated_at,
+            place: c.rail_destination,
+        },
+    ].filter(Boolean);
+    if (!rows.length && c.eta) rows.push({ key: 'expected', label: t('details.etaExpected'), when: c.eta });
+    if (!rows.length) return <span className="dc-muted">{t('details.etaNone')}</span>;
+    return (
+        <div style={{ display: 'grid', gap: 4, minWidth: 190 }}>
+            {rows.map((r) => (
+                <div key={r.key} className="dc-small" style={{ lineHeight: 1.35 }}>
+                    <span className="dc-muted">{r.label}</span>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span className="dc-strong" style={{ whiteSpace: 'nowrap' }}>{formatDate(r.when, true)}</span>
+                        <EtaSource source={r.source} updatedAt={r.updated} />
+                    </div>
+                    {r.place && <div className="dc-muted">{t('details.etaTo', { place: r.place })}</div>}
+                </div>
+            ))}
+        </div>
     );
 }
 
@@ -716,7 +818,7 @@ function TimelineCard({ timeline, ticket, onSaved }) {
                 <ul className="dc-timeline">
                     {shown.map((e) => {
                         const style = e.event_type === 'stage' ? { icon: '', tone: STAGE_TONE[e.stage] || 'teal' } : EVENT_STYLE[e.event_type] || EVENT_STYLE.update;
-                        const who = e.actor_role === 'system' ? t('details.whoSystem') : e.actor_role === 'admin' ? (IS_ADMIN ? e.actor_name || 'DeepClear' : 'DeepClear') : e.actor_name || t('details.whoClient');
+                        const who = e.actor_role === 'system' ? (e.actor_name && e.actor_name !== 'CBSA via Candata' ? e.actor_name : t('details.whoSystem')) : e.actor_role === 'admin' ? (IS_ADMIN ? e.actor_name || 'DeepClear' : 'DeepClear') : e.actor_name || t('details.whoClient');
                         return (
                             <li key={e.event_id} className={`dc-tl-item ${e.event_type === 'comment' ? 'comment' : ''} ${!e.visible_to_client ? 'internal' : ''}`}>
                                 <span className={`dc-tl-dot dc-tone-${style.tone}`} style={{ background: 'currentColor' }} />

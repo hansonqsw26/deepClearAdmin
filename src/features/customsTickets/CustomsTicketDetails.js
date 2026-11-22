@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { docHint, docName, eventText, locale, stageName } from '../../i18n';
-import { Badge, Button, Card, DropZone, EmptyState, Field, Page, Spinner, display, formatDate, timeAgo, useToast } from '../../ui/components';
+import { Badge, Button, Card, DropZone, EmptyState, Field, Page, Spinner, display, formatDate, timeAgo, toTorontoInput, useToast } from '../../ui/components';
 import { customsApi, IS_ADMIN } from './customs.api';
 import { CbsaBadge, StageBadge, StageStepper } from './CustomsBits';
 import { PoaBadge, PoaUpload, canManageAccounts, poaNeedsAction } from './Importers';
@@ -53,7 +53,7 @@ const EVENT_STYLE = {
 /** Broker-side wording for documents whose usual hint speaks to the client. */
 const ADMIN_HINT = { 'release cad': 'details.releaseCadAdminHint', 'brokerage invoice': 'details.invoiceHint', 'draft cad': '' };
 
-const toLocalInput = (v) => (v ? String(v).replace(' ', 'T').slice(0, 16) : '');
+const toLocalInput = toTorontoInput;
 
 export default function CustomsTicketDetails() {
     const { t } = useTranslation();

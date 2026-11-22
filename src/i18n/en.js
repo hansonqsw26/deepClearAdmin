@@ -439,7 +439,7 @@ const en = {
         entryButton: 'Customs entry',
         colEtas: 'Arrival (ETA)',
         etasTitle: 'Arrival estimates',
-        etasHelp: 'Filled from the official sources (ocean carrier, CN, CPKC) when they are set up. A date you type here is kept as entered until you clear it.',
+        etasHelp: 'Filled from the official sources (ocean carrier, CN, CPKC) when they are set up. A date you type here is kept as entered until you clear it. All times are Toronto time.',
         refreshEtas: 'Refresh ETAs',
         etasRefreshed_one: '1 ETA updated from the official sources.',
         etasRefreshed_other: '{{count}} ETAs updated from the official sources.',

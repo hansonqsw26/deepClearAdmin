@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { docHint, docName, eventText, locale, stageName } from '../../i18n';
-import { Badge, Button, Card, DropZone, EmptyState, Field, Page, Spinner, display, formatDate, timeAgo, useToast } from '../../ui/components';
+import { Badge, Button, Card, DropZone, EmptyState, Field, Page, Spinner, display, formatDate, timeAgo, toTorontoInput, useToast } from '../../ui/components';
 import { customsApi, IS_ADMIN } from './customs.api';
 import { CbsaBadge, StageBadge, StageStepper } from './CustomsBits';
 import { PoaBadge, PoaUpload, canManageAccounts, poaNeedsAction } from './Importers';
@@ -53,7 +53,7 @@ const EVENT_STYLE = {
 /** Broker-side wording for documents whose usual hint speaks to the client. */
 const ADMIN_HINT = { 'release cad': 'details.releaseCadAdminHint', 'brokerage invoice': 'details.invoiceHint', 'draft cad': '' };
 
-const toLocalInput = (v) => (v ? String(v).replace(' ', 'T').slice(0, 16) : '');
+const toLocalInput = toTorontoInput;
 
 export default function CustomsTicketDetails() {
     const { t } = useTranslation();
@@ -436,9 +436,7 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
                         <thead>
                             <tr>
                                 <th>{iso ? t('details.colContainer') : t('details.colUnit')}</th>
-                                <th>{t('field.sealShort')}</th>
                                 <th>{iso ? t('details.colEtas') : t('field.etaShort')}</th>
-                                {IS_ADMIN && <th>{t('details.colTxn')}</th>}
                                 <th>{t('details.colCbsa')}</th>
                                 {canChange && <th aria-label="actions" />}
                             </tr>
@@ -447,17 +445,21 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
                             {containers.map((c) => (
                                 <tr key={c.container_id}>
                                     <td className="dc-td-head" data-label={t('details.colContainer')}>
-                                        <span className="dc-mono dc-strong">{c.container_number || '—'}</span>
-                                        {c.size_type && <span className="dc-small dc-muted"> · {c.size_type}</span>}
+                                        <div>
+                                            <span className="dc-mono dc-strong">{c.container_number || '—'}</span>
+                                            {c.size_type && <span className="dc-small dc-muted"> · {c.size_type}</span>}
+                                            {c.seal_number && <div className="dc-small dc-muted">{t('field.sealShort')} <span className="dc-mono">{c.seal_number}</span></div>}
+                                        </div>
                                     </td>
-                                    <td data-label={t('field.sealShort')}>{display(c.seal_number)}</td>
                                     <td data-label={iso ? t('details.colEtas') : t('field.etaShort')}>
                                         {iso ? <EtaList c={c} /> : <span style={{ whiteSpace: 'nowrap' }}>{formatDate(c.eta, true)}</span>}
                                     </td>
-                                    {IS_ADMIN && <td data-label={t('details.colTxn')} className="dc-mono">{display(c.transaction_number)}</td>}
                                     <td data-label={t('details.colCbsa')}>
-                                        <CbsaBadge code={c.cb_status} label={c.cb_status_label} />
-                                        {c.cb_status_time && <div className="dc-small dc-muted">{formatDate(c.cb_status_time, true)}</div>}
+                                        <div>
+                                            <CbsaBadge code={c.cb_status} label={c.cb_status_label} />
+                                            {c.cb_status_time && <div className="dc-small dc-muted">{formatDate(c.cb_status_time, true)}</div>}
+                                            {IS_ADMIN && <div className="dc-small dc-muted" style={{ whiteSpace: 'nowrap' }}>{t('details.colTxn')} <span className="dc-mono">{display(c.transaction_number)}</span></div>}
+                                        </div>
                                     </td>
                                     {canChange && (
                                         <td data-label="" style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -532,6 +534,8 @@ const ETA_FIELDS = ['vessel_eta', 'port_eta', 'rail_eta'];
 function EtaSource({ source, updatedAt }) {
     const { t } = useTranslation();
     if (!source) return null;
+    // "Manual" only means something to staff; clients just see the date.
+    if (!IS_ADMIN && source === 'manual') return null;
     const name = t(`details.source.${source}`, { defaultValue: source });
     return (
         <Badge tone={source === 'manual' ? 'gray' : 'blue'} plain title={updatedAt ? t('details.etaSourceTitle', { source: name, when: formatDate(updatedAt, true) }) : name}>
@@ -554,10 +558,10 @@ function EtaList({ c }) {
             place: c.rail_destination,
         },
     ].filter(Boolean);
-    if (!rows.length && c.eta) rows.push({ key: 'expected', label: t('details.etaExpected'), when: c.eta });
+    if (!rows.length && c.eta) rows.push({ key: 'expected', label: IS_ADMIN ? t('details.etaExpected') : t('field.etaShort'), when: c.eta });
     if (!rows.length) return <span className="dc-muted">{t('details.etaNone')}</span>;
     return (
-        <div style={{ display: 'grid', gap: 4, minWidth: 190 }}>
+        <div style={{ display: 'grid', gap: 4, minWidth: 160 }}>
             {rows.map((r) => (
                 <div key={r.key} className="dc-small" style={{ lineHeight: 1.35 }}>
                     <span className="dc-muted">{r.label}</span>

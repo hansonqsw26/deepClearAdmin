@@ -438,7 +438,7 @@ const zh = {
         entryButton: '录入交易号',
         colEtas: '预计到达',
         etasTitle: '预计到达时间',
-        etasHelp: '设置好官方数据源（船公司、CN、CPKC）后会自动填写。手动填写的时间会一直保留，清空后才恢复自动更新。',
+        etasHelp: '设置好官方数据源（船公司、CN、CPKC）后会自动填写。手动填写的时间会一直保留，清空后才恢复自动更新。所有时间均为多伦多时间。',
         refreshEtas: '刷新预计到达',
         etasRefreshed_other: '已从官方数据源更新 {{count}} 个预计到达时间。',
         etasNoChange: '官方数据源暂无新的预计到达时间。',

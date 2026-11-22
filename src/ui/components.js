@@ -251,13 +251,34 @@ export function useDebounced(value, ms = 300) {
     return v;
 }
 
+/** DeepClear works in Toronto time: every date and time is shown and typed in it, wherever the viewer is. */
+export const APP_TIME_ZONE = 'America/Toronto';
+
+/* A plain calendar date (a DATE column, or one sent as UTC midnight) has no time zone. */
+const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}(T00:00:00(\.000)?Z)?$/;
+
 export function formatDate(value, withTime = false) {
     if (!value) return '—';
     const d = new Date(String(value).replace(' ', 'T'));
     if (Number.isNaN(d.getTime())) return String(value);
-    const opts = { year: 'numeric', month: 'short', day: 'numeric' };
+    const opts = { year: 'numeric', month: 'short', day: 'numeric', timeZone: APP_TIME_ZONE };
     if (withTime) Object.assign(opts, { hour: 'numeric', minute: '2-digit' });
+    else if (CALENDAR_DATE.test(String(value))) opts.timeZone = 'UTC';
     return d.toLocaleString(locale(), opts);
+}
+
+/** Value for a datetime-local input, in Toronto time ("2026-12-06T14:00"). */
+export function toTorontoInput(value) {
+    if (!value) return '';
+    const raw = String(value).replace(' ', 'T');
+    // A time without zone is already Toronto wall-clock time.
+    if (!/(Z|[+-]\d{2}:?\d{2})$/.test(raw)) return raw.slice(0, 16);
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return '';
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+        timeZone: APP_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(d).map((x) => [x.type, x.value]));
+    return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
 export function timeAgo(value) {

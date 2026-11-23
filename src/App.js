@@ -10,6 +10,7 @@ import { isAuthenticated } from './store/selectors/AuthSelectors';
 
 import './vendor/swiper/css/swiper-bundle.min.css';
 import './vendor/bootstrap-select/dist/css/bootstrap-select.min.css';
+import './css/fonts.css';
 import './css/style.css';
 
 const Login = lazy(() => import('./features/auth/Login'));

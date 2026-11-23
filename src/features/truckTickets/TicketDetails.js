@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from '../../api/http';
+import { documentClick, uploadDocument } from '../../api/files';
 
 function useQuery() {
     return new URLSearchParams(useLocation().search);
@@ -154,19 +155,13 @@ const TicketDetails = () => {
 
         setUploadingPod(true);
         try {
-            const formDataToSend = new FormData();
-            formDataToSend.append("file", selectedPodFile);
-            formDataToSend.append("ticket_id", ticket.truck_ticket_id);
-            formDataToSend.append("container_number", ticket.container_number);
-            formDataToSend.append("file_type", "pod");
+            const { ok: uploaded, data } = await uploadDocument("/uploadFile", {
+                ticket_id: ticket.truck_ticket_id,
+                container_number: ticket.container_number,
+                file_type: "pod",
+            }, selectedPodFile);
 
-            const res = await apiFetch("/admin/uploadFile", {
-                method: "POST",
-                body: formDataToSend,
-            });
-            const data = await res.json();
-
-            if (res.ok) {
+            if (uploaded) {
                 alert("✅ POD file uploaded!");
                 setSelectedPodFile(null);
                 fetchPodFiles(); // refresh list
@@ -803,6 +798,7 @@ const TicketDetails = () => {
                         >
                             <a
                                 href={file.file_link}
+                                onClick={documentClick(file.file_link)}
                                 target="_blank"
                                 rel="noreferrer"
                             >

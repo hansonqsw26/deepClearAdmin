@@ -7,7 +7,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { docHint, docName, eventText, locale, stageName } from '../../i18n';
+import { docHint, docName, eventText, locale, stageName, t as i18nT } from '../../i18n';
 import { Badge, Button, Card, DropZone, EmptyState, Field, Page, Spinner, display, formatDate, timeAgo, toTorontoInput, useToast } from '../../ui/components';
 import { customsApi, IS_ADMIN } from './customs.api';
 import { CbsaBadge, StageBadge, StageStepper } from './CustomsBits';
@@ -64,6 +64,7 @@ export default function CustomsTicketDetails() {
     const options = useCustomsOptions();
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
+    const [editSignal, setEditSignal] = useState(0); // "add it in the shipment details" opens the edit form
 
     const load = useCallback(() => {
         customsApi.get(mainId).then(setData).catch((e) => setError(e.message));
@@ -154,12 +155,14 @@ export default function CustomsTicketDetails() {
 
             <div className="dc-layout-main dc-actions-first">
                 <div>
-                    <ShipmentCard shipment={shipment} ticket={ticket} canEdit={data.can_edit} options={options} onSaved={load} />
+                    <ShipmentCard shipment={shipment} ticket={ticket} canEdit={data.can_edit} options={options} onSaved={load} editSignal={editSignal} />
                     <ContainersCard containers={containers} ticket={ticket} mode={mode} canEdit={data.can_edit} options={options} onSaved={load} />
                     <DocumentsCard documents={documents} ticket={ticket} containers={containers} onSaved={load} />
                 </div>
                 <div>
-                    {IS_ADMIN && <StageCard ticket={ticket} options={options} documents={documents} onSaved={load} />}
+                    <NeedsCard readiness={data.readiness} ticket={ticket} canEdit={data.can_edit}
+                        onUpload={() => jump('dc-documents')} onEdit={() => { setEditSignal((n) => n + 1); jump('dc-shipment'); }} />
+                    {IS_ADMIN && <StageCard ticket={ticket} options={options} documents={documents} readiness={data.readiness} onSaved={load} />}
                     <CadCard ticket={ticket} containers={containers} documents={documents} onSaved={load} toast={toast} />
                     <TimelineCard timeline={timeline} ticket={ticket} onSaved={load} />
                 </div>
@@ -170,7 +173,10 @@ export default function CustomsTicketDetails() {
 
 /* ---------------------------------------------------------------- shipment */
 
-function ShipmentCard({ shipment, ticket, canEdit, options, onSaved }) {
+/** Shown even when empty, so it is clear they are still to come. Other fields only show once filled in. */
+const ALWAYS_SHOWN = ['bill_of_lading', 'cargo_control_number', 'consignee_name', 'importer_bn', 'origin_country', 'goods_description'];
+
+function ShipmentCard({ shipment, ticket, canEdit, options, onSaved, editSignal }) {
     const { t } = useTranslation();
     const toast = useToast();
     const [editing, setEditing] = useState(false);
@@ -188,6 +194,7 @@ function ShipmentCard({ shipment, ticket, canEdit, options, onSaved }) {
         setErrors({});
         setEditing(true);
     };
+    useEffect(() => { if (editSignal && canEdit) start(); }, [editSignal]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const save = async () => {
         setSaving(true);
@@ -213,13 +220,17 @@ function ShipmentCard({ shipment, ticket, canEdit, options, onSaved }) {
     };
 
     if (!editing) {
+        const filled = (k) => shipment[k] !== null && shipment[k] !== undefined && shipment[k] !== '';
+        const shown = SHIPMENT_FIELDS.filter(([k]) => ALWAYS_SHOWN.includes(k) || filled(k));
+        const hidden = SHIPMENT_FIELDS.length - shown.length;
         return (
             <Card
+                id="dc-shipment"
                 title={t('details.shipmentDetails')}
                 actions={canEdit && <Button variant="secondary" size="sm" icon="fa-solid fa-pen" onClick={start}>{t('common.edit')}</Button>}
             >
                 <dl className="dc-kv">
-                    {SHIPMENT_FIELDS.map(([k, label, opt = {}]) => (
+                    {shown.map(([k, label, opt = {}]) => (
                         <div key={k} style={opt.wide ? { gridColumn: '1 / -1' } : undefined}>
                             <dt>{t(`field.${label}`)}</dt>
                             <dd className={opt.upper ? 'dc-mono' : ''}>{fmt(k, shipment[k], opt)}</dd>
@@ -232,6 +243,12 @@ function ShipmentCard({ shipment, ticket, canEdit, options, onSaved }) {
                         </div>
                     )}
                 </dl>
+                {hidden > 0 && (
+                    <div className="dc-small dc-muted" style={{ marginTop: 12 }}>
+                        {t('details.moreEmpty', { count: hidden })}{' '}
+                        {canEdit && <button type="button" className="dc-link" onClick={start}>{t('details.addDetails')}</button>}
+                    </div>
+                )}
                 {!canEdit && (
                     <div className="dc-small dc-muted" style={{ marginTop: 16 }}>
                         <i className="fa-solid fa-lock" /> {t('details.locked')}
@@ -251,7 +268,7 @@ function ShipmentCard({ shipment, ticket, canEdit, options, onSaved }) {
     };
 
     return (
-        <Card title={t('details.editShipment')}>
+        <Card id="dc-shipment" title={t('details.editShipment')}>
             <div className="dc-grid dc-grid-2">
                 <Field label={t('field.transport')} name="transport_mode" as="select" value={form.transport_mode}
                     onChange={(e) => setForm((f) => ({ ...f, transport_mode: e.target.value }))}
@@ -704,9 +721,69 @@ function CadCard({ ticket, containers, documents, onSaved, toast }) {
     );
 }
 
+/* ------------------------------------------------------------ still needed */
+
+/** Stages where the checklist is useful: before the release request. */
+const NEEDS_STAGES = ['submitted', 'in_review', 'awaiting_client'];
+
+const needName = (key) => (['commercial invoice', 'packing list', 'bill of lading'].includes(key) ? docName(key) : i18nT(`need.${key}`));
+
+/**
+ * What the file still needs. Clients see only what they can provide, with a
+ * button to do it; staff see everything, grouped by when it is needed.
+ */
+function NeedsCard({ readiness, ticket, canEdit, onUpload, onEdit }) {
+    const { t } = useTranslation();
+    if (!readiness || !NEEDS_STAGES.includes(ticket.stage)) return null;
+    const items = IS_ADMIN ? readiness.items : readiness.items.filter((i) => !i.done && i.who === 'client');
+    if (!IS_ADMIN && !items.length) return null;
+    const action = (i) => {
+        if (i.done) return null;
+        if (i.document) return <Button size="sm" variant="secondary" onClick={onUpload}>{t('common.upload')}</Button>;
+        if (i.key === 'poa') {
+            if (IS_ADMIN) return canManageAccounts() ? <Link className="dc-link" to={`/client-accounts?client=${ticket.client_id}`}>{t('details.poaOpenClient')}</Link> : null;
+            return <Link className="dc-btn dc-btn-secondary dc-btn-sm" to="/importers">{t('details.poaUpload')}</Link>;
+        }
+        if (i.key === 'cargo_control_number' && !IS_ADMIN) return <Button size="sm" variant="secondary" onClick={onUpload}>{t('need.uploadAn')}</Button>;
+        if (['importer', 'cargo_control_number'].includes(i.key) && canEdit) return <Button size="sm" variant="secondary" onClick={onEdit}>{t('common.edit')}</Button>;
+        return null;
+    };
+    const groups = IS_ADMIN ? ['review', 'release'] : [null];
+    return (
+        <Card title={readiness.ready_for_release ? t('need.allIn') : t('need.title')}
+            sub={IS_ADMIN ? t('need.subAdmin', { count: readiness.missing }) : t('need.subClient')}>
+            <div data-testid="needs-card">
+                {groups.map((g) => {
+                    const list = items.filter((i) => !g || i.when === g);
+                    if (!list.length) return null;
+                    return (
+                        <div key={g || 'all'} style={{ marginBottom: 8 }}>
+                            {g && <div className="dc-small dc-muted dc-strong" style={{ margin: '4px 0 6px' }}>{t(`need.when.${g}`)}</div>}
+                            {list.map((i) => (
+                                <div key={i.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid var(--dc-line, #eee)' }}>
+                                    <i className={i.done ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle'} style={{ color: i.done ? 'var(--dc-green, #16a34a)' : 'var(--dc-amber, #d97706)' }} />
+                                    <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                                        <div style={{ fontSize: 14 }}>{needName(i.key)}</div>
+                                        {!i.done && (
+                                            <div className="dc-small dc-muted">
+                                                {IS_ADMIN ? t(`need.who.${i.who}`) : t(`need.hint.${i.document ? 'document' : i.key}`)}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {action(i)}
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })}
+            </div>
+        </Card>
+    );
+}
+
 /* ------------------------------------------------------------- stage (admin) */
 
-function StageCard({ ticket, options, documents, onSaved }) {
+function StageCard({ ticket, options, documents, readiness, onSaved }) {
     const { t } = useTranslation();
     const toast = useToast();
     const [stage, setStage] = useState(ticket.stage);
@@ -738,9 +815,16 @@ function StageCard({ ticket, options, documents, onSaved }) {
         setMessage((m) => (m.includes(name) ? m : (m ? `${m.trim()} ` : '') + t('details.askForMessage', { list: name })));
     };
     const nextLabel = next && stageName(next, options.stages.find((s) => s.key === next).label);
+    // Before asking CBSA for release, say what is still open (a reminder, not a block: Candata is the system of record).
+    const openForRelease = next === 'release_requested' && readiness ? readiness.items.filter((i) => !i.done) : [];
 
     return (
         <Card title={t('details.stageTitle')} sub={t('details.stageSub')}>
+            {openForRelease.length > 0 && (
+                <div className="dc-alert dc-tone-amber" style={{ marginBottom: 10 }} data-testid="release-missing">
+                    <i className="fa-solid fa-circle-info" /> {t('details.releaseMissing', { list: openForRelease.map((i) => needName(i.key)).join(t('common.listSep')) })}
+                </div>
+            )}
             {nextLabel && !['completed', 'cancelled'].includes(ticket.stage) && (
                 <Button block busy={busy} icon="fa-solid fa-forward" onClick={() => save(next, message)} style={{ marginBottom: 14 }}>
                     {t('details.moveTo', { stage: nextLabel })}

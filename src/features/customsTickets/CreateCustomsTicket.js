@@ -1,26 +1,62 @@
 /**
- * New customs shipment: shipment & routing, parties, goods, containers and
- * documents in one page. Documents upload right after the ticket is created.
- * Admins pick the client and may also enter broker fields (transaction number).
+ * New customs shipment, short form. Only what opens the file is asked for:
+ * how it ships, the importer, the B/L (or CCN) and the container numbers.
+ * Documents are optional here: drop them all at once and each gets a type.
+ * Routing details sit behind "More details"; everything else (shipper, goods,
+ * value, POA, transaction number) is collected on the shipment page when the
+ * work needs it. The filing itself is done in Candata.
+ * Admins pick the client and may also enter the transaction number.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { docName } from '../../i18n';
-import { Button, Card, DropZone, Field, Page, useToast } from '../../ui/components';
+import { Badge, Button, Card, DropZone, Field, Page, useToast } from '../../ui/components';
 import { customsApi, importersApi, IS_ADMIN } from './customs.api';
 import { PoaBadge, canManageAccounts, poaNeedsAction } from './Importers';
-import { COUNTRIES, CURRENCIES, TRANSPORT_ICONS, TRANSPORT_LABELS, checkContainer, countryName, useCustomsOptions } from './customsMeta';
+import { COUNTRIES, TRANSPORT_ICONS, TRANSPORT_LABELS, checkContainer, countryName, useCustomsOptions } from './customsMeta';
 
-const EMPTY_CONTAINER = { container_number: '', size_type: '40HC', seal_number: '' };
 const ISO_MODES = ['marine', 'rail'];
+const CORE_DOCS = ['commercial invoice', 'packing list', 'bill of lading'];
 
 const INITIAL = {
-    transport_mode: 'marine', bill_of_lading: '', house_bill: '', cargo_control_number: '', carrier_name: '', vessel_name: '',
-    voyage_number: '', port_of_loading: '', port_of_entry: '', origin_country: '', shipper_name: '', shipper_address: '',
-    consignee_name: '', consignee_address: '', importer_bn: '', goods_description: '', package_count: '', gross_weight_kg: '',
-    invoice_value: '', invoice_currency: 'USD', incoterm: '',
+    transport_mode: 'marine', bill_of_lading: '', cargo_control_number: '', carrier_name: '', vessel_name: '',
+    voyage_number: '', port_of_entry: '', origin_country: '', consignee_name: '', consignee_address: '', importer_bn: '',
+    goods_description: '',
 };
+
+/** Document type from a file name; unknown files take the first core document still missing. */
+const GUESS = [
+    [/invoice|\binv\b|\bci\b|发票/i, 'commercial invoice'],
+    [/packing|\bpl\b|装箱/i, 'packing list'],
+    [/arrival|\ban\b|到货/i, 'arrival notice'],
+    [/lading|\bb ?l\b|\bmbl\b|\bhbl\b|waybill|\bawb\b|提单/i, 'bill of lading'],
+    [/origin|\bcoo\b|\bco\b|原产地/i, 'certificate of origin'],
+    [/permit|cfia|licen[cs]e|许可/i, 'permit'],
+];
+export function guessDocType(name, taken = []) {
+    const plain = String(name).replace(/\.[a-z0-9]+$/i, '').replace(/[_\-.()[\]/]+/g, ' ');
+    const hit = GUESS.find(([re]) => re.test(plain));
+    if (hit) return hit[1];
+    return CORE_DOCS.find((k) => !taken.includes(k)) || 'other';
+}
+
+/**
+ * Container numbers pasted from a B/L or arrival notice: one per line, or with
+ * spaces / commas between, "MSCU 123456-6" style included. Returns unique numbers
+ * and the bits that are not container numbers.
+ */
+export function parseContainers(text) {
+    const upper = String(text || '').toUpperCase();
+    const re = /[A-Z]{4}\s?\d{6}\s?-?\s?\d/g;
+    const numbers = [];
+    for (const m of upper.match(re) || []) {
+        const n = m.replace(/[\s-]/g, '');
+        if (!numbers.includes(n)) numbers.push(n);
+    }
+    const bad = upper.replace(re, ' ').split(/[\s,;/]+/).filter(Boolean);
+    return { numbers, bad };
+}
 
 export default function CreateCustomsTicket() {
     const { t } = useTranslation();
@@ -30,19 +66,23 @@ export default function CreateCustomsTicket() {
     const [clients, setClients] = useState([]);
     const [clientId, setClientId] = useState('');
     const [shipment, setShipment] = useState(INITIAL);
+    const [containerText, setContainerText] = useState('');
+    const [unit, setUnit] = useState(''); // air / truck: ULD or trailer number
     const [eta, setEta] = useState('');
     const [destination, setDestination] = useState('');
     const [txn, setTxn] = useState(''); // admin: one customs entry for every container
     const [note, setNote] = useState('');
-    const [containers, setContainers] = useState([{ ...EMPTY_CONTAINER }]);
-    const [files, setFiles] = useState({}); // file_type -> File[]
+    const [files, setFiles] = useState([]); // [{ file, type }]
+    const [more, setMore] = useState(false);
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
     const [progress, setProgress] = useState('');
     const [importers, setImporters] = useState(null); // null = not loaded
     const [importerId, setImporterId] = useState('');
 
-    const iso = ISO_MODES.includes(shipment.transport_mode);
+    const mode = shipment.transport_mode;
+    const iso = ISO_MODES.includes(mode);
+    const parsed = parseContainers(containerText);
 
     useEffect(() => {
         if (!IS_ADMIN) return;
@@ -91,37 +131,34 @@ export default function CreateCustomsTicket() {
     const set = (field) => (e) => {
         const value = e.target.value;
         setShipment((s) => ({ ...s, [field]: value }));
-        setErrors((x) => ({ ...x, [field]: undefined }));
-    };
-    const setContainer = (i, field, value) => {
-        setContainers((list) => list.map((c, j) => (j === i ? { ...c, [field]: value } : c)));
-        setErrors((x) => ({ ...x, [`containers.${i}.${field}`]: undefined }));
+        // The B/L and CCN are either-or, so typing one clears the error on the other.
+        setErrors((x) => ({ ...x, [field]: undefined, ...(field === 'cargo_control_number' ? { bill_of_lading: undefined } : {}) }));
     };
 
-    const docTypes = useMemo(() => (options ? options.document_types.filter((d) => d.requirement !== 'broker') : []), [options]);
-    const missingRequired = docTypes.filter((d) => d.requirement === 'required' && !(files[d.key] || []).length);
+    const addFiles = (list) => setFiles((current) => {
+        const next = [...current];
+        for (const file of list) next.push({ file, type: guessDocType(file.name, next.map((f) => f.type)) });
+        return next;
+    });
+    const docTypes = options ? options.document_types.filter((d) => d.requirement !== 'broker') : [];
+    const missingCore = CORE_DOCS.filter((k) => !files.some((f) => f.type === k));
 
     function validate() {
         const e = {};
         if (IS_ADMIN && !clientId) e.client_id = t('create.err.client');
-        if (!shipment.bill_of_lading.trim()) e.bill_of_lading = shipment.transport_mode === 'air' ? t('create.err.awb') : t('create.err.bl');
-        if (!shipment.origin_country) e.origin_country = t('create.err.origin');
-        if (!shipment.shipper_name.trim()) e.shipper_name = t('create.err.shipper');
-        if (!shipment.consignee_name.trim()) e.consignee_name = t('create.err.consignee');
-        if (!shipment.goods_description.trim()) e.goods_description = t('create.err.goods');
+        if (!shipment.bill_of_lading.trim() && !shipment.cargo_control_number.trim()) e.bill_of_lading = mode === 'air' ? t('create.err.awbOrCcn') : t('create.err.blOrCcn');
         if (shipment.importer_bn && !/^\d{9}RM\d{4}$/i.test(shipment.importer_bn.replace(/\s/g, ''))) e.importer_bn = t('create.err.bn');
         if (shipment.cargo_control_number && !/^[A-Z0-9]{4}[A-Z0-9-]{1,21}$/i.test(shipment.cargo_control_number.trim())) e.cargo_control_number = t('create.err.ccn');
-        const seen = new Set();
-        containers.forEach((c, i) => {
-            const n = c.container_number.toUpperCase().replace(/[\s-]/g, '');
-            if (iso) {
-                if (!n) e[`containers.${i}.container_number`] = t('create.err.container');
-                else if (checkContainer(n).error) e[`containers.${i}.container_number`] = checkContainer(n).error;
+        if (iso) {
+            if (parsed.bad.length) e.containers = t('create.err.notContainers', { list: parsed.bad.slice(0, 3).join(', ') });
+            else if (!parsed.numbers.length) e.containers = t('create.err.containers');
+            else {
+                const wrong = parsed.numbers.find((n) => checkContainer(n).error);
+                if (wrong) e.containers = `${wrong}: ${checkContainer(wrong).error}`;
             }
-            if (n && seen.has(n)) e[`containers.${i}.container_number`] = t('create.err.twice');
-            if (n) seen.add(n);
-        });
+        }
         if (IS_ADMIN && txn && !/^\d{14}$/.test(txn.replace(/\s/g, ''))) e.transaction_number = t('create.err.txn');
+        if (e.transaction_number) setMore(true);
         setErrors(e);
         return e;
     }
@@ -131,20 +168,21 @@ export default function CreateCustomsTicket() {
         const e = validate();
         if (Object.keys(e).length) {
             toast.error(t('create.fixFields'));
-            const first = document.querySelector('.dc-field.has-error');
-            if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => {
+                const first = document.querySelector('.dc-field.has-error');
+                if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 50);
             return;
         }
         setSaving(true);
         try {
             setProgress(t('create.creating'));
+            const numbers = iso ? parsed.numbers : [unit.trim()];
             const body = {
                 note: note || undefined,
                 shipment: { ...shipment, importer_id: importers && importers.length ? (importerId ? Number(importerId) : null) : undefined },
-                containers: containers.map((c) => ({
-                    container_number: c.container_number,
-                    size_type: iso ? c.size_type : undefined,
-                    seal_number: c.seal_number,
+                containers: numbers.map((n) => ({
+                    container_number: n,
                     eta: eta ? eta.replace('T', ' ') : undefined,
                     destination: destination || undefined,
                     ...(IS_ADMIN && txn ? { transaction_number: txn } : {}),
@@ -153,12 +191,11 @@ export default function CreateCustomsTicket() {
             if (IS_ADMIN) body.client_id = Number(clientId);
             const created = await customsApi.create(body);
 
-            const uploads = Object.entries(files).flatMap(([type, list]) => list.map((f) => [type, f]));
             let failed = 0;
-            for (let i = 0; i < uploads.length; i += 1) {
-                setProgress(t('create.uploading', { n: i + 1, total: uploads.length }));
+            for (let i = 0; i < files.length; i += 1) {
+                setProgress(t('create.uploading', { n: i + 1, total: files.length }));
                 try {
-                    await customsApi.upload(created.cb_id, uploads[i][0], uploads[i][1]);
+                    await customsApi.upload(created.cb_id, files[i].type, files[i].file);
                 } catch (err) {
                     failed += 1;
                 }
@@ -167,10 +204,11 @@ export default function CreateCustomsTicket() {
             toast.success(t('create.submitted', { ref: created.reference_number }));
             navigate(`/customs-ticket-details?main_id=${created.main_id}`, { replace: true });
         } catch (err) {
-            const fieldErrors = err.fields || {};
-            const mapped = {};
-            for (const [k, v] of Object.entries(fieldErrors)) mapped[k] = v;
-            setErrors(mapped);
+            const fieldErrors = { ...(err.fields || {}) };
+            // Container errors come back per container (containers.0.container_number): show them on the box.
+            const bad = Object.keys(fieldErrors).find((k) => k.startsWith('containers.'));
+            if (bad) fieldErrors.containers = fieldErrors[bad];
+            setErrors(fieldErrors);
             toast.error(err.message);
         } finally {
             setSaving(false);
@@ -180,59 +218,41 @@ export default function CreateCustomsTicket() {
 
     const err = (k) => errors[k];
     const modes = (options && options.transport_modes) || ['marine', 'air', 'rail', 'highway'];
+    const blLabel = mode === 'air' ? t('field.awb') : t('field.bl');
 
     return (
         <Page
             title={IS_ADMIN ? t('create.titleAdmin') : t('create.titleClient')}
-            subtitle={t('create.subtitle')}
+            subtitle={t('create.subtitleQuick')}
             back={{ label: t('create.back'), onClick: () => navigate('/customs-tickets-list') }}
         >
             <form onSubmit={submit} noValidate>
                 <div className="dc-layout-main">
                     <div>
-                        {IS_ADMIN && (
-                            <Card title={t('create.clientCard')}>
-                                <Field label={t('field.client')} required name="client_id" as="select" value={clientId} error={err('client_id')}
-                                    onChange={(e) => { setClientId(e.target.value); setErrors((x) => ({ ...x, client_id: undefined })); }}
-                                    options={[{ value: '', label: t('field.chooseClient') }, ...clients.map((c) => ({ value: c.client_id, label: c.company_name ? `${c.company_name} (${c.client_name})` : c.client_name }))]} />
-                            </Card>
-                        )}
+                        <Card title={t('create.basics')} sub={t('create.basicsSub')}>
+                            {IS_ADMIN && (
+                                <div style={{ marginBottom: 16 }}>
+                                    <Field label={t('field.client')} required name="client_id" as="select" value={clientId} error={err('client_id')}
+                                        onChange={(e) => { setClientId(e.target.value); setErrors((x) => ({ ...x, client_id: undefined })); }}
+                                        options={[{ value: '', label: t('field.chooseClient') }, ...clients.map((c) => ({ value: c.client_id, label: c.company_name ? `${c.company_name} (${c.client_name})` : c.client_name }))]} />
+                                </div>
+                            )}
 
-                        <Card title={t('create.routing')} sub={t('create.routingSub')}>
                             <div className="dc-field" style={{ marginBottom: 16 }}>
                                 <label>{t('field.howShipped')}</label>
                                 <div className="dc-chips" style={{ padding: 0 }}>
                                     {modes.map((m) => (
-                                        <button key={m} type="button" className={`dc-chip ${shipment.transport_mode === m ? 'active' : ''}`}
-                                            onClick={() => setShipment((s) => ({ ...s, transport_mode: m }))}>
+                                        <button key={m} type="button" className={`dc-chip ${mode === m ? 'active' : ''}`}
+                                            onClick={() => { setShipment((s) => ({ ...s, transport_mode: m })); setErrors((x) => ({ ...x, containers: undefined })); }}>
                                             <i className={TRANSPORT_ICONS[m]} /> {TRANSPORT_LABELS[m]}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            <div className="dc-grid dc-grid-2">
-                                <Field label={shipment.transport_mode === 'air' ? t('field.awb') : t('field.bl')} required name="bill_of_lading" upper
-                                    value={shipment.bill_of_lading} onChange={set('bill_of_lading')} error={err('bill_of_lading')} placeholder={t('field.blPlaceholder')} />
-                                <Field label={t('field.houseBill')} name="house_bill" upper value={shipment.house_bill} onChange={set('house_bill')} hint={t('field.houseBillHint')} />
-                                <Field label={t('field.ccn')} name="cargo_control_number" upper value={shipment.cargo_control_number}
-                                    onChange={set('cargo_control_number')} error={err('cargo_control_number')} hint={t('field.ccnHint')} />
-                                <Field label={t('field.carrier')} name="carrier_name" value={shipment.carrier_name} onChange={set('carrier_name')} placeholder={t('field.carrierPlaceholder')} />
-                                <Field label={shipment.transport_mode === 'air' ? t('field.flight') : t('field.vessel')} name="vessel_name" value={shipment.vessel_name} onChange={set('vessel_name')} />
-                                <Field label={t('field.voyage')} name="voyage_number" value={shipment.voyage_number} onChange={set('voyage_number')} />
-                                <Field label={t('field.pol')} name="port_of_loading" value={shipment.port_of_loading} onChange={set('port_of_loading')} placeholder={t('field.polPlaceholder')} />
-                                <Field label={t('field.poe')} name="port_of_entry" value={shipment.port_of_entry} onChange={set('port_of_entry')} placeholder={t('field.poePlaceholder')} />
-                                <Field label={t('field.origin')} required name="origin_country" as="select" value={shipment.origin_country} onChange={set('origin_country')}
-                                    error={err('origin_country')} options={[{ value: '', label: t('common.choose') }, ...COUNTRIES.map(([c]) => ({ value: c, label: `${countryName(c)} (${c})` }))]} />
-                                <Field label={t('field.eta')} name="eta" type="datetime-local" value={eta} onChange={(e) => setEta(e.target.value)} />
-                                <Field label={t('field.destination')} name="destination" value={destination} onChange={(e) => setDestination(e.target.value)} placeholder={t('field.destinationPlaceholder')} className="dc-span-2" />
-                            </div>
-                        </Card>
 
-                        <Card title={t('create.parties')}>
-                            {importers && importers.length > 0 && (
+                            {importers && importers.length > 0 ? (
                                 <div style={{ marginBottom: 16 }}>
-                                    <Field label={t('create.importer')} name="importer_id" as="select" value={importerId} onChange={pickImporter} error={err('importer_id')}
-                                        hint={importer ? t('create.importerHint') : t('create.importerOtherHint')}
+                                    <Field label={t('create.importer')} required name="importer_id" as="select" value={importerId} onChange={pickImporter} error={err('importer_id')}
                                         options={[...importers.map((i) => ({ value: String(i.importer_id), label: `${i.legal_name} · ${i.importer_bn}` })), { value: '', label: t('create.importerOther') }]} />
                                     {importer && (
                                         <div className="dc-importer-pick">
@@ -246,114 +266,118 @@ export default function CreateCustomsTicket() {
                                     {importer && poaNeedsAction(importer.poa_state) && (
                                         <div className="dc-alert dc-tone-amber" style={{ marginTop: 8 }}>
                                             <i className="fa-solid fa-file-signature" />{' '}
-                                            {IS_ADMIN ? t(`create.poaStaff.${importer.poa_state}`) : t(`create.poaClient.${importer.poa_state}`)}{' '}
+                                            {IS_ADMIN ? t(`create.poaStaff.${importer.poa_state}`) : t(`create.poaLater.${importer.poa_state}`)}{' '}
                                             {!IS_ADMIN && <Link className="dc-strong" style={{ textDecoration: 'underline' }} to="/importers">{t('create.poaOpenImporters')}</Link>}
                                             {canManageAccounts() && <Link className="dc-strong" style={{ textDecoration: 'underline' }} to={`/client-accounts?client=${clientId}`}>{t('create.poaOpenClient')}</Link>}
                                         </div>
                                     )}
                                 </div>
-                            )}
-                            <div className="dc-grid dc-grid-2">
-                                <Field label={t('field.shipper')} required name="shipper_name" value={shipment.shipper_name} onChange={set('shipper_name')} error={err('shipper_name')} />
-                                <Field label={t('field.consignee')} required name="consignee_name" value={shipment.consignee_name} onChange={set('consignee_name')} error={err('consignee_name')} />
-                                <Field label={t('field.shipperAddress')} name="shipper_address" as="textarea" rows={2} value={shipment.shipper_address} onChange={set('shipper_address')} />
-                                <Field label={t('field.consigneeAddress')} name="consignee_address" as="textarea" rows={2} value={shipment.consignee_address} onChange={set('consignee_address')} />
-                                {!importer && (
+                            ) : null}
+                            {importers && (!importers.length || !importer) && (
+                                <div className="dc-grid dc-grid-2" style={{ marginBottom: 16 }}>
+                                    <Field label={t('create.importerName')} name="consignee_name" value={shipment.consignee_name} onChange={set('consignee_name')} error={err('consignee_name')} />
                                     <Field label={t('field.importerBn')} name="importer_bn" upper value={shipment.importer_bn} onChange={set('importer_bn')}
-                                        error={err('importer_bn')} placeholder="123456789RM0001" hint={t('field.importerBnHint')} />
-                                )}
-                            </div>
-                        </Card>
-
-                        <Card title={t('create.goods')}>
-                            <div className="dc-grid dc-grid-3">
-                                <Field label={t('field.goods')} required name="goods_description" as="textarea" rows={2} className="dc-span-all"
-                                    value={shipment.goods_description} onChange={set('goods_description')} error={err('goods_description')} placeholder={t('field.goodsPlaceholder')} />
-                                <Field label={t('field.packages')} name="package_count" type="number" min="0" value={shipment.package_count} onChange={set('package_count')} />
-                                <Field label={t('field.grossWeight')} name="gross_weight_kg" type="number" min="0" step="0.01" value={shipment.gross_weight_kg} onChange={set('gross_weight_kg')} />
-                                <Field label={t('field.incoterm')} name="incoterm" as="select" value={shipment.incoterm} onChange={set('incoterm')}
-                                    options={[{ value: '', label: t('common.notSure') }, ...((options && options.incoterms) || []).map((i) => ({ value: i, label: i }))]} />
-                                <Field label={t('field.invoiceValue')} name="invoice_value" type="number" min="0" step="0.01" value={shipment.invoice_value} onChange={set('invoice_value')} />
-                                <Field label={t('field.currency')} name="invoice_currency" as="select" value={shipment.invoice_currency} onChange={set('invoice_currency')}
-                                    options={CURRENCIES.map((c) => ({ value: c, label: c }))} />
-                            </div>
-                        </Card>
-
-                        <Card title={iso ? t('create.containers') : t('create.units')} sub={iso ? t('create.containersSub') : t('create.unitsSub')}
-                            actions={<Button variant="secondary" size="sm" icon="fa-solid fa-plus" onClick={() => setContainers((l) => [...l, { ...EMPTY_CONTAINER }])}>{iso ? t('create.addContainer') : t('create.addUnit')}</Button>}>
-                            {IS_ADMIN && (
-                                <div className="dc-grid dc-grid-3" style={{ marginBottom: 12 }}>
-                                    <Field label={t('field.transactionNumber')} name="transaction_number" value={txn} inputMode="numeric"
-                                        onChange={(e) => setTxn(e.target.value)} error={err('transaction_number')} hint={t('field.transactionHintAll')} />
+                                        error={err('importer_bn')} placeholder="123456789RM0001" hint={t('create.bnLater')} />
                                 </div>
                             )}
-                            {containers.map((c, i) => {
-                                const check = iso ? checkContainer(c.container_number) : {};
-                                return (
-                                    <div className="dc-row-card" key={i}>
-                                        <div className="dc-row-card-head">
-                                            <span>{iso ? t('create.containerN', { n: i + 1 }) : t('create.unitN', { n: i + 1 })}</span>
-                                            {containers.length > 1 && (
-                                                <Button variant="ghost" size="sm" icon="fa-regular fa-trash-can" onClick={() => setContainers((l) => l.filter((_, j) => j !== i))}>{t('common.remove')}</Button>
-                                            )}
-                                        </div>
-                                        <div className="dc-grid dc-grid-3">
-                                            <Field label={iso ? t('field.containerNumber') : t('field.uld')} required={iso} upper name={`container_${i}`}
-                                                value={c.container_number} onChange={(e) => setContainer(i, 'container_number', e.target.value)}
-                                                error={err(`containers.${i}.container_number`)} warning={check.warning} placeholder={iso ? 'MSCU1234566' : ''} />
-                                            {iso && (
-                                                <Field label={t('field.sizeType')} name={`size_${i}`} as="select" value={c.size_type} onChange={(e) => setContainer(i, 'size_type', e.target.value)}
-                                                    options={((options && options.container_sizes) || ['20GP', '40GP', '40HC']).map((s) => ({ value: s, label: s }))} />
-                                            )}
-                                            <Field label={t('field.seal')} name={`seal_${i}`} value={c.seal_number} onChange={(e) => setContainer(i, 'seal_number', e.target.value)} />
-                                        </div>
-                                    </div>
-                                );
-                            })}
+
+                            <div className="dc-grid dc-grid-2">
+                                <Field label={blLabel} name="bill_of_lading" upper value={shipment.bill_of_lading} onChange={set('bill_of_lading')}
+                                    error={err('bill_of_lading')} placeholder={t('field.blPlaceholder')} hint={t('create.blHint')} />
+                                <Field label={t('field.ccn')} name="cargo_control_number" upper value={shipment.cargo_control_number}
+                                    onChange={set('cargo_control_number')} error={err('cargo_control_number')} hint={t('create.ccnLater')} />
+                                {iso ? (
+                                    <Field label={t('create.containerNumbers')} required name="containers" className="dc-span-2" error={err('containers')}
+                                        hint={t('create.containerNumbersHint')}>
+                                        <textarea id="containers" name="containers" className="dc-input dc-input-upper dc-mono" rows={2} value={containerText}
+                                            placeholder="MSCU1234566  TGHU7654321"
+                                            onChange={(e) => { setContainerText(e.target.value); setErrors((x) => ({ ...x, containers: undefined })); }} />
+                                    </Field>
+                                ) : (
+                                    <Field label={mode === 'air' ? t('field.uld') : t('create.trailer')} name="unit" upper value={unit}
+                                        onChange={(e) => setUnit(e.target.value)} hint={t('create.unitOptional')} />
+                                )}
+                            </div>
+                            {iso && parsed.numbers.length > 0 && (
+                                <div className="dc-chips" style={{ padding: '8px 0 0' }} data-testid="container-chips">
+                                    {parsed.numbers.map((n) => {
+                                        const check = checkContainer(n);
+                                        return (
+                                            <Badge key={n} tone={check.error ? 'red' : check.warning ? 'amber' : 'teal'} title={check.error || check.warning}>
+                                                <span className="dc-mono">{n}</span>
+                                            </Badge>
+                                        );
+                                    })}
+                                    <span className="dc-small dc-muted" style={{ alignSelf: 'center' }}>{t('create.containersFound', { count: parsed.numbers.length })}</span>
+                                </div>
+                            )}
+                        </Card>
+
+                        <Card title={t('create.moreDetails')} sub={t('create.moreDetailsSub')}
+                            actions={<Button variant="secondary" size="sm" icon={more ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'} onClick={() => setMore((m) => !m)}>
+                                {more ? t('create.hideMore') : t('create.showMore')}
+                            </Button>}>
+                            {more ? (
+                                <div className="dc-grid dc-grid-2">
+                                    <Field label={t('field.carrier')} name="carrier_name" value={shipment.carrier_name} onChange={set('carrier_name')} placeholder={t('field.carrierPlaceholder')} />
+                                    <Field label={mode === 'air' ? t('field.flight') : t('field.vessel')} name="vessel_name" value={shipment.vessel_name} onChange={set('vessel_name')} />
+                                    <Field label={t('field.voyage')} name="voyage_number" value={shipment.voyage_number} onChange={set('voyage_number')} />
+                                    <Field label={t('field.poe')} name="port_of_entry" value={shipment.port_of_entry} onChange={set('port_of_entry')} placeholder={t('field.poePlaceholder')} />
+                                    <Field label={t('field.eta')} name="eta" type="datetime-local" value={eta} onChange={(e) => setEta(e.target.value)} />
+                                    <Field label={t('field.destination')} name="destination" value={destination} onChange={(e) => setDestination(e.target.value)} placeholder={t('field.destinationPlaceholder')} />
+                                    <Field label={t('field.origin')} name="origin_country" as="select" value={shipment.origin_country} onChange={set('origin_country')}
+                                        options={[{ value: '', label: t('common.notSure') }, ...COUNTRIES.map(([c]) => ({ value: c, label: `${countryName(c)} (${c})` }))]} />
+                                    {IS_ADMIN && (
+                                        <Field label={t('field.transactionNumber')} name="transaction_number" value={txn} inputMode="numeric"
+                                            onChange={(e) => setTxn(e.target.value)} error={err('transaction_number')} hint={t('field.transactionHintAll')} />
+                                    )}
+                                    <Field label={t('field.goods')} name="goods_description" as="textarea" rows={2} className="dc-span-2"
+                                        value={shipment.goods_description} onChange={set('goods_description')} placeholder={t('field.goodsPlaceholder')} />
+                                </div>
+                            ) : (
+                                <div className="dc-small dc-muted">{t('create.moreDetailsHint')}</div>
+                            )}
                         </Card>
                     </div>
 
                     <div>
-                        <Card title={t('create.documents')} sub={t('create.documentsSub')}>
-                            {!options && <div className="dc-muted">{t('common.loading')}</div>}
-                            {docTypes.map((d) => (
-                                <div key={d.key} style={{ marginBottom: 16 }}>
-                                    <div className="dc-actions" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-                                        <span className="dc-strong" style={{ fontSize: 14 }}>
-                                            {docName(d.key)}
-                                            {d.requirement === 'required' && <span style={{ color: 'var(--dc-red)' }}> *</span>}
-                                        </span>
-                                        {d.requirement === 'recommended' && <span className="dc-small dc-muted">{t('common.recommended')}</span>}
-                                    </div>
-                                    {(files[d.key] || []).map((f, i) => (
-                                        <div key={`${f.name}${i}`} className="dc-doc-file" style={{ marginBottom: 6 }}>
-                                            <i className="fa-regular fa-file-lines dc-muted" />
-                                            <span className="dc-truncate" style={{ color: 'var(--dc-ink)' }}>{f.name}</span>
-                                            <button type="button" className="dc-link" onClick={() => setFiles((x) => ({ ...x, [d.key]: x[d.key].filter((_, j) => j !== i) }))}>{t('common.removeLink')}</button>
-                                        </div>
-                                    ))}
-                                    {d.requirement === 'required' ? (
-                                        <DropZone label={t('create.dropOne')} onFiles={(list) => setFiles((x) => ({ ...x, [d.key]: [...(x[d.key] || []), ...list] }))} />
-                                    ) : (
-                                        <DropZone compact label={t('common.attach')} onFiles={(list) => setFiles((x) => ({ ...x, [d.key]: [...(x[d.key] || []), ...list] }))} />
-                                    )}
+                        <Card title={t('create.documents')} sub={t('create.docsQuickSub')}>
+                            {files.map((f, i) => (
+                                <div key={`${f.file.name}${i}`} className="dc-doc-file" style={{ marginBottom: 8, alignItems: 'center', gap: 8 }}>
+                                    <i className="fa-regular fa-file-lines dc-muted" />
+                                    <span className="dc-truncate" style={{ color: 'var(--dc-ink)', flex: '1 1 auto' }}>{f.file.name}</span>
+                                    <select className="dc-input" aria-label={t('create.docType')} style={{ width: 'auto', maxWidth: 170, padding: '4px 8px', height: 'auto' }}
+                                        value={f.type} onChange={(e) => setFiles((x) => x.map((y, j) => (j === i ? { ...y, type: e.target.value } : y)))}>
+                                        {docTypes.map((d) => <option key={d.key} value={d.key}>{docName(d.key)}</option>)}
+                                    </select>
+                                    <button type="button" className="dc-link" onClick={() => setFiles((x) => x.filter((_, j) => j !== i))}>{t('common.removeLink')}</button>
                                 </div>
                             ))}
+                            <DropZone label={files.length ? t('create.dropMore') : t('create.dropAll')} onFiles={addFiles} />
+                            <div className="dc-chips" style={{ padding: '10px 0 0' }}>
+                                {CORE_DOCS.map((k) => (
+                                    <Badge key={k} tone={missingCore.includes(k) ? 'gray' : 'green'} plain>
+                                        <i className={missingCore.includes(k) ? 'fa-regular fa-circle' : 'fa-solid fa-check'} /> {docName(k)}
+                                    </Badge>
+                                ))}
+                            </div>
                         </Card>
 
                         <Card title={t('create.notes')}>
-                            <Field name="note" as="textarea" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('create.notesPlaceholder')} />
+                            <Field name="note" as="textarea" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('create.notesPlaceholder')} />
                         </Card>
 
                         <Card>
-                            {missingRequired.length > 0 && (
-                                <div className="dc-alert dc-tone-amber">
-                                    <i className="fa-solid fa-circle-info" /> {t('create.missing', { list: missingRequired.map((d) => docName(d.key)).join(t('common.listSep')) })}
-                                </div>
+                            {!IS_ADMIN && (
+                                <ol className="dc-small" style={{ margin: '0 0 14px', paddingLeft: 18, lineHeight: 1.6 }}>
+                                    <li>{t('create.next1')}</li>
+                                    <li>{t('create.next2')}</li>
+                                    <li>{t('create.next3')}</li>
+                                </ol>
                             )}
-                            <Button type="submit" block busy={saving} icon="fa-solid fa-paper-plane">{saving ? progress : t('create.submit')}</Button>
+                            <Button type="submit" block busy={saving} icon="fa-solid fa-paper-plane">{saving ? progress : IS_ADMIN ? t('create.submitAdmin') : t('create.submit')}</Button>
                             <div className="dc-small dc-muted" style={{ marginTop: 10, textAlign: 'center' }}>
-                                {t('create.editUntil')}
+                                {IS_ADMIN ? t('create.adminLater') : t('create.editUntil')}
                             </div>
                         </Card>
                     </div>

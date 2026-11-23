@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { ACCEPTED_FILES, Badge, Button, Card, EmptyState, Field, Page, Spinner, formatDate, useToast } from '../../ui/components';
 import { getSession } from '../../api/session';
 import { IS_ADMIN, importersApi } from './customs.api';
+import { documentClick } from '../../api/files';
 
 /** Staff who manage client accounts (operations staff, department 2, do not). */
 export const canManageAccounts = () => IS_ADMIN && Number((getSession() || {}).department) !== 2;
@@ -220,7 +221,7 @@ export function ImportersPanel({ clientId, canManage = false, onChange }) {
                             <PoaDates importer={r} />
                             {r.poa_file_link && (
                                 <div className="dc-small">
-                                    <a href={r.poa_file_link} target="_blank" rel="noreferrer"><i className="fa-regular fa-file-lines" /> {r.poa_file_name || t('importers.poaFile')}</a>
+                                    <a href={r.poa_file_link} onClick={documentClick(r.poa_file_link)} target="_blank" rel="noreferrer"><i className="fa-regular fa-file-lines" /> {r.poa_file_name || t('importers.poaFile')}</a>
                                 </div>
                             )}
                         </div>

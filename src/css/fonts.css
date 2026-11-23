@@ -1,0 +1,19 @@
+/*
+ * Fonts served from our own site (bundled by the build), not from Google Fonts.
+ * Google is blocked in mainland China, and a blocked @import there can leave the
+ * page blank until the request times out. Each weight downloads only when used.
+ */
+@import "@fontsource/cairo/300.css";
+@import "@fontsource/cairo/400.css";
+@import "@fontsource/cairo/600.css";
+@import "@fontsource/cairo/700.css";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
+@import "@fontsource/roboto/400.css";
+@import "@fontsource/roboto/500.css";
+@import "@fontsource/roboto/700.css";
+@import "@fontsource/open-sans/400.css";
+@import "@fontsource/open-sans/600.css";
+@import "@fontsource/lato/400.css";

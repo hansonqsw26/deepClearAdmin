@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { docHint, docName, eventText, locale, stageName, t as i18nT } from '../../i18n';
 import { Badge, Button, Card, DropZone, EmptyState, Field, Page, Spinner, display, formatDate, timeAgo, toTorontoInput, useToast } from '../../ui/components';
 import { customsApi, IS_ADMIN } from './customs.api';
+import { documentClick } from '../../api/files';
 import { CbsaBadge, StageBadge, StageStepper } from './CustomsBits';
 import { PoaBadge, PoaUpload, canManageAccounts, poaNeedsAction } from './Importers';
 import { CAD_STATUS, COUNTRIES, CURRENCIES, STAGE_TONE, TRANSPORT_ICONS, TRANSPORT_LABELS, checkContainer, countryName, useCustomsOptions } from './customsMeta';
@@ -655,7 +656,7 @@ function DocumentsCard({ documents, ticket, onSaved }) {
                                     {d.files.map((f) => (
                                         <div className="dc-doc-file" key={f.file_id}>
                                             <i className="fa-regular fa-file-lines dc-muted" />
-                                            <a href={f.file_link} target="_blank" rel="noreferrer">{f.file_name || t('common.file')}</a>
+                                            <a href={f.file_link} onClick={documentClick(f.file_link)} target="_blank" rel="noreferrer">{f.file_name || t('common.file')}</a>
                                             <span>{formatDate(f.create_date)}</span>
                                             {IS_ADMIN && <button type="button" className="dc-link" style={{ color: 'var(--dc-red)' }} onClick={() => remove(f)}>{t('common.delete')}</button>}
                                         </div>
@@ -706,7 +707,7 @@ function CadCard({ ticket, containers, documents, onSaved, toast }) {
                 {IS_ADMIN ? t('details.cadAdmin') : t('details.cadClient')}
             </p>
             {latest && (
-                <a className="dc-btn dc-btn-secondary dc-btn-block" href={latest.file_link} target="_blank" rel="noreferrer" style={{ marginBottom: 10 }}>
+                <a className="dc-btn dc-btn-secondary dc-btn-block" href={latest.file_link} onClick={documentClick(latest.file_link)} target="_blank" rel="noreferrer" style={{ marginBottom: 10 }}>
                     <i className="fa-regular fa-file-pdf" /> {t('details.openDraft')}
                 </a>
             )}

@@ -12,6 +12,7 @@ import { Badge, Button, Card, DropZone, EmptyState, Field, Page, Spinner, displa
 import { customsApi, IS_ADMIN } from './customs.api';
 import { CbsaBadge, StageBadge, StageStepper } from './CustomsBits';
 import { PoaBadge, PoaUpload, canManageAccounts, poaNeedsAction } from './Importers';
+import { CheckCard, ReadPanel, aiApi, canRead } from './DocumentAi';
 import { CAD_STATUS, COUNTRIES, CURRENCIES, STAGE_TONE, TRANSPORT_ICONS, TRANSPORT_LABELS, checkContainer, countryName, useCustomsOptions } from './customsMeta';
 
 /** Stages after which a missing POA no longer blocks anything. */
@@ -65,10 +66,28 @@ export default function CustomsTicketDetails() {
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
     const [editSignal, setEditSignal] = useState(0); // "add it in the shipment details" opens the edit form
+    const [version, setVersion] = useState(0); // bumps on every reload, so the document check knows it is stale
+    const [aiRead, setAiRead] = useState(null); // staff: what the AI read from one document
+    const [readingId, setReadingId] = useState(null);
 
     const load = useCallback(() => {
-        customsApi.get(mainId).then(setData).catch((e) => setError(e.message));
+        customsApi.get(mainId).then((d) => { setData(d); setVersion((n) => n + 1); }).catch((e) => setError(e.message));
     }, [mainId]);
+
+    /** Staff: read one document with AI and show the suggestions at the top of the page. */
+    const readDocument = async (file, force = false) => {
+        setReadingId(file.file_id);
+        try {
+            const r = await aiApi.read(mainId, file.file_id, force);
+            setAiRead(r);
+            setTimeout(() => { const el = document.getElementById('dc-ai-read'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+            if (!r.cached) load();
+        } catch (e) {
+            toast.error(e.message);
+        } finally {
+            setReadingId(null);
+        }
+    };
 
     useEffect(() => {
         if (!mainId) setError(t('details.noneSelected'));
@@ -155,13 +174,23 @@ export default function CustomsTicketDetails() {
 
             <div className="dc-layout-main dc-actions-first">
                 <div>
+                    {IS_ADMIN && aiRead && (
+                        <ReadPanel result={aiRead} ticket={ticket} busy={readingId === aiRead.file.file_id}
+                            onReread={() => readDocument(aiRead.file, true)}
+                            onClose={() => setAiRead(null)}
+                            onApplied={() => { setAiRead(null); load(); }} />
+                    )}
                     <ShipmentCard shipment={shipment} ticket={ticket} canEdit={data.can_edit} options={options} onSaved={load} editSignal={editSignal} />
                     <ContainersCard containers={containers} ticket={ticket} mode={mode} canEdit={data.can_edit} options={options} onSaved={load} />
-                    <DocumentsCard documents={documents} ticket={ticket} containers={containers} onSaved={load} />
+                    <DocumentsCard documents={documents} ticket={ticket} containers={containers} onSaved={load}
+                        ai={data.ai} readingId={readingId} onRead={readDocument} />
                 </div>
                 <div>
                     <NeedsCard readiness={data.readiness} ticket={ticket} canEdit={data.can_edit}
                         onUpload={() => jump('dc-documents')} onEdit={() => { setEditSignal((n) => n + 1); jump('dc-shipment'); }} />
+                    {IS_ADMIN && !['completed', 'cancelled'].includes(ticket.stage) && (
+                        <CheckCard ticket={ticket} aiEnabled={Boolean(data.ai && data.ai.enabled)} refreshKey={version} onSent={load} />
+                    )}
                     {IS_ADMIN && <StageCard ticket={ticket} options={options} documents={documents} readiness={data.readiness} onSaved={load} />}
                     <CadCard ticket={ticket} containers={containers} documents={documents} onSaved={load} toast={toast} />
                     <TimelineCard timeline={timeline} ticket={ticket} onSaved={load} />
@@ -595,7 +624,7 @@ function EtaList({ c }) {
 
 /* --------------------------------------------------------------- documents */
 
-function DocumentsCard({ documents, ticket, onSaved }) {
+function DocumentsCard({ documents, ticket, onSaved, ai, readingId, onRead }) {
     const { t } = useTranslation();
     const toast = useToast();
     const [busyType, setBusyType] = useState(null);
@@ -657,6 +686,13 @@ function DocumentsCard({ documents, ticket, onSaved }) {
                                             <i className="fa-regular fa-file-lines dc-muted" />
                                             <a href={f.file_link} target="_blank" rel="noreferrer">{f.file_name || t('common.file')}</a>
                                             <span>{formatDate(f.create_date)}</span>
+                                            {IS_ADMIN && ai && ai.enabled && canRead(d.key, f) && (
+                                                readingId === f.file_id ? <span className="dc-small dc-muted"><span className="dc-spinner" style={{ width: 12, height: 12, borderWidth: 2 }} /> {t('ai.reading')}</span> : (
+                                                    <button type="button" className="dc-link" onClick={() => onRead(f)} data-testid={`ai-read-${f.file_id}`}>
+                                                        <i className="fa-solid fa-wand-magic-sparkles" /> {(ai.read_file_ids || []).includes(f.file_id) ? t('ai.readDone') : t('ai.read')}
+                                                    </button>
+                                                )
+                                            )}
                                             {IS_ADMIN && <button type="button" className="dc-link" style={{ color: 'var(--dc-red)' }} onClick={() => remove(f)}>{t('common.delete')}</button>}
                                         </div>
                                     ))}

@@ -13,6 +13,7 @@ import { customsApi, IS_ADMIN } from './customs.api';
 import { CbsaBadge, StageBadge, StageStepper } from './CustomsBits';
 import { PoaBadge, PoaUpload, canManageAccounts, poaNeedsAction } from './Importers';
 import { CheckCard, ReadPanel, aiApi, canRead } from './DocumentAi';
+import { TariffCard, TariffStatus } from './Tariff';
 import { CAD_STATUS, COUNTRIES, CURRENCIES, STAGE_TONE, TRANSPORT_ICONS, TRANSPORT_LABELS, checkContainer, countryName, useCustomsOptions } from './customsMeta';
 
 /** Stages after which a missing POA no longer blocks anything. */
@@ -181,7 +182,11 @@ export default function CustomsTicketDetails() {
                             onApplied={() => { setAiRead(null); load(); }} />
                     )}
                     <ShipmentCard shipment={shipment} ticket={ticket} canEdit={data.can_edit} options={options} onSaved={load} editSignal={editSignal} />
-                    <ContainersCard containers={containers} ticket={ticket} mode={mode} canEdit={data.can_edit} options={options} onSaved={load} />
+                    <ContainersCard containers={containers} ticket={ticket} mode={mode} canEdit={data.can_edit} options={options} onSaved={load}
+                        tariffLines={IS_ADMIN && data.ai ? data.ai.tariff_lines : null} onTariff={() => jump('dc-tariff')} />
+                    {IS_ADMIN && !['cancelled'].includes(ticket.stage) && (
+                        <TariffCard ticket={ticket} shipment={shipment} refreshKey={version} onSaved={load} />
+                    )}
                     <DocumentsCard documents={documents} ticket={ticket} containers={containers} onSaved={load}
                         ai={data.ai} readingId={readingId} onRead={readDocument} />
                 </div>
@@ -315,7 +320,7 @@ function ShipmentCard({ shipment, ticket, canEdit, options, onSaved, editSignal 
 
 /* -------------------------------------------------------------- containers */
 
-function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved }) {
+function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved, tariffLines, onTariff }) {
     const { t } = useTranslation();
     const toast = useToast();
     const iso = !mode || mode === 'marine' || mode === 'rail';
@@ -467,6 +472,7 @@ function ContainersCard({ containers, ticket, mode, canEdit, options, onSaved })
                             </label>
                         ))}
                     </div>
+                    <TariffStatus count={tariffLines} onOpen={onTariff} />
                     <div className="dc-actions end" style={{ marginTop: 14 }}>
                         <Button variant="ghost" onClick={() => setEntry(null)}>{t('common.cancel')}</Button>
                         <Button busy={saving} disabled={!entry.txn.trim() || entry.ids.size === 0} icon="fa-solid fa-check" onClick={saveEntry}>

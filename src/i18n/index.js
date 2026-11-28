@@ -97,6 +97,10 @@ const EVENT_PATTERNS = [
     [/^Customs entry (\d{14}) set(?: for (.+))?\.$/, (m) => t('event.entrySet', { txn: m[1], which: m[2] ? t('event.entryFor', { list: m[2] }) : '' })],
     [/^Customs entry removed(?: from (.+))?\.$/, (m) => t('event.entryRemoved', { which: m[1] ? t('event.entryFrom', { list: m[1] }) : '' })],
     [/^(Vessel|Port|Rail) ETA for (\S+): (\S+ \S+) \((.+)\)\.$/, (m) => t('event.etaUpdate', { kind: t(`event.etaKind.${m[1]}`), n: m[2], when: m[3], source: m[4] })],
+    [/^Tariff classification confirmed: (\d+) lines? \((.+?)\)(?:, (\d+) changed from the AI suggestion)?\.$/, (m) => t('event.tariffConfirmed', {
+        count: m[1], codes: m[2], changed: m[3] ? t('event.tariffChanged', { count: m[3] }) : '',
+    })],
+    [/^Tariff classification cleared\.$/, () => t('event.tariffCleared')],
     [/^(.+?) uploaded: (.+)$/s, (m) => (docKey(m[1]) ? t('event.docUploaded', { doc: docName(m[1]), name: m[2] }) : null)],
 ];
 export function eventText(message) {
